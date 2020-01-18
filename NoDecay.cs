@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.37", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
+    [Info("NoDecay", "RFC1920", "1.0.38", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
     [Description("Scales or disables decay of items")]
 
     class NoDecay : RustPlugin
@@ -31,6 +31,7 @@ namespace Oxide.Plugins
         private float c_bbqMultiplier;
         private float c_boatMultiplier;
         private float c_minicopterMultiplier;
+        private float c_scrapcopterMultiplier;
         private float c_watchtowerMultiplier;
         private float c_horseMultiplier;
 
@@ -76,7 +77,8 @@ namespace Oxide.Plugins
             c_highWoodWallMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "highWoodWallMultiplier", 0.0));
             c_highStoneWallMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "highStoneWallMultiplier", 0.0));
             c_boatMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "boatMultiplier", 0.0));
-            c_minicopterMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "minicopterMultiplier", 0.0));
+            c_minicopterMultiplier  = Convert.ToSingle(GetConfigValue("Mutipliers", "minicopterMultiplier", 0.0));
+            c_scrapcopterMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "scrapcopterMultiplier", 0.0));
 
             c_outputToRcon  = Convert.ToBoolean(GetConfigValue("Debug", "outputToRcon", false));
             c_outputMundane = Convert.ToBoolean(GetConfigValue("Debug", "outputMundane", false));
@@ -358,10 +360,16 @@ namespace Oxide.Plugins
                     OutputRcon($"Decay ({entity_name}) before: {before} after: {hitInfo.damageTypes.Get(Rust.DamageType.Decay)}", true);
                 }
                 else if (entity.LookupPrefab().name == "minicopter.entity")
-
                 {
                     var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
                     hitInfo.damageTypes.Scale(Rust.DamageType.Decay, c_minicopterMultiplier);
+
+                    OutputRcon($"Decay ({entity_name}) before: {before} after: {hitInfo.damageTypes.Get(Rust.DamageType.Decay)}", true);
+                }
+                else if (entity.LookupPrefab().name == "ScrapTransportHelicopter")
+                {
+                    var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
+                    hitInfo.damageTypes.Scale(Rust.DamageType.Decay, c_scrapcopterMultiplier);
 
                     OutputRcon($"Decay ({entity_name}) before: {before} after: {hitInfo.damageTypes.Get(Rust.DamageType.Decay)}", true);
                 }
