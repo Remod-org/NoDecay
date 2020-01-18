@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.39", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
+    [Info("NoDecay", "RFC1920", "1.0.40", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
     [Description("Scales or disables decay of items")]
 
     class NoDecay : RustPlugin
@@ -40,10 +40,11 @@ namespace Oxide.Plugins
         private bool c_usePermission;
         private bool c_requireCupboard;
         private bool c_CupboardEntity;
+        private bool c_blockCupboardResources;
+        private bool c_blockCupboardWood;
         private float c_cupboardRange;
 
         private bool g_configChanged;
-        private string entity_name;
 
         void Loaded() => LoadConfigValues();
 
@@ -83,6 +84,8 @@ namespace Oxide.Plugins
             c_outputToRcon  = Convert.ToBoolean(GetConfigValue("Debug", "outputToRcon", false));
             c_outputMundane = Convert.ToBoolean(GetConfigValue("Debug", "outputMundane", false));
             c_usePermission = Convert.ToBoolean(GetConfigValue("Global", "usePermission", false));
+            c_blockCupboardResources = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardResources", false));
+            c_blockCupboardWood = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardWood", false));
 
             try
             {
@@ -106,7 +109,7 @@ namespace Oxide.Plugins
 
         object GetConfigValue(string category, string setting, object defaultValue)
         {
-            var data = Config[category] as Dictionary<string, object>;
+            Dictionary<string, object> data = Config[category] as Dictionary<string, object>;
             object value;
 
             if (data == null)
@@ -126,8 +129,8 @@ namespace Oxide.Plugins
         [HookMethod("SendHelpText")]
         private void SendHelpText(BasePlayer player)
         {
-            var sb = new StringBuilder();
-            sb.Append("<color=#05eb59>NoDecay 1.0.3</color> · Controls decay\n");
+            StringBuilder sb = new StringBuilder();
+            sb.Append("<color=#05eb59>" + Name + " " + Version + "</color> · Controls decay\n");
             sb.Append("  · ").AppendLine($"twig={c_twigMultiplier} - campfire={c_campfireMultiplier}");
             sb.Append("  · ").Append($"wood ={ c_woodMultiplier} - stone ={ c_stoneMultiplier} - sheet ={ c_sheetMultiplier} - armored ={ c_armoredMultiplier}\n");
 
@@ -161,12 +164,44 @@ namespace Oxide.Plugins
             }
         }
 
+        // Prevent players from adding building resources to cupboard
+        private object CanMoveItem(Item item, PlayerInventory inventory, uint targetContainer, int targetSlot)
+        {
+            if(!(c_blockCupboardResources || c_blockCupboardWood)) return null;
+            if(item == null) return null;
+            if(targetContainer == null) return null;
+
+            ItemContainer container = inventory.FindContainer(targetContainer);
+
+            try
+            {
+                var cup = container.entityOwner as BaseEntity;
+
+                if(cup.name.Contains("cupboard.tool"))
+                {
+                    string res = item.info.shortname;
+                    if(res.Contains("wood") && c_blockCupboardWood)
+                    {
+                        OutputRcon($"Player tried to add {res} to a cupboard!");
+                        return false;
+                    }
+                    else if((res.Contains("stones") || res.Contains("metal.frag") || res.Contains("metal.refined")) && c_blockCupboardResources)
+                    {
+                        OutputRcon($"Player tried to add {res} to a cupboard!");
+                        return false;
+                    }
+                }
+            }
+            catch {}
+            return null;
+        }
+
         void OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitInfo)
         {
-            var tick = DateTime.Now;
+            DateTime tick = DateTime.Now;
 
-            entity_name = entity.LookupPrefab().name;
-            var owner = entity.OwnerID.ToString();
+            string entity_name = entity.LookupPrefab().name;
+            string owner = entity.OwnerID.ToString();
             if(c_usePermission)
             {
                 if(permission.UserHasPermission(owner, "nodecay.use") || owner == "0")
@@ -188,7 +223,7 @@ namespace Oxide.Plugins
                 if (!hitInfo.damageTypes.Has(Rust.DamageType.Decay)) return;
 
                 var block = entity as BuildingBlock;
-                var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
+                float before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
 
                 if (block != null)
                 {
@@ -346,15 +381,16 @@ namespace Oxide.Plugins
             }
             finally
             {
-                var ms = (DateTime.Now - tick).TotalMilliseconds;
+                double ms = (DateTime.Now - tick).TotalMilliseconds;
                 if (ms > 10 || c_outputMundane) Puts($"NoDecay.OnEntityTakeDamage on {entity_name} took {ms} ms to execute.");
             }
         }
 
         void ProcessBuildingDamage(BuildingBlock block, BaseEntity entity, HitInfo hitInfo)
         {
-            var multiplier = 1.0f;
-            var isHighWall = block.LookupPrefab().name.Contains("wall.external");
+            float multiplier = 1.0f;
+            bool isHighWall = block.LookupPrefab().name.Contains("wall.external");
+            bool isHighGate = block.LookupPrefab().name.Contains("gates.external");
 
             string type = "other";
             bool hascup = true; // Assume true (has cupboard or we don't care)
@@ -386,6 +422,11 @@ namespace Oxide.Plugins
                             multiplier = c_highWoodWallMultiplier;
                             type = "high wood wall";
                         }
+                        else if(isHighWall)
+                        {
+                            multiplier = c_highWoodWallMultiplier;
+                            type = "high wood gate";
+                        }
                         else
                         {
                             multiplier = c_woodMultiplier;
@@ -397,6 +438,11 @@ namespace Oxide.Plugins
                         {
                             multiplier = c_highStoneWallMultiplier;
                             type = "high stone wall";
+                        }
+                        else if(isHighWall)
+                        {
+                            multiplier = c_highWoodWallMultiplier;
+                            type = "high stone gate";
                         }
                         else
                         {
@@ -419,7 +465,7 @@ namespace Oxide.Plugins
                 }
             }
 
-            var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
+            float before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
             hitInfo.damageTypes.Scale(Rust.DamageType.Decay, multiplier);
 
             OutputRcon($"Decay ({type}) before: {before} after: {hitInfo.damageTypes.Get(Rust.DamageType.Decay)}");
