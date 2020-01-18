@@ -5,7 +5,7 @@ using Oxide.Core.Plugins;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "Diesel_42o", "1.0.27", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb
+    [Info("NoDecay", "Diesel_42o", "1.0.28", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb
     [Description("Scales or disables decay of items")]
 
     class NoDecay : RustPlugin
@@ -112,7 +112,7 @@ namespace Oxide.Plugins
                     ProcessCampfireDamage(hitInfo);
                 else if (entity.LookupPrefab().name == "box.wooden.large" ||
                         entity.LookupPrefab().name == "woodbox_deployed" ||
-                        entity.LookupPrefab().name == "coffinstorage")
+                        entity.LookupPrefab().name == "CoffinStorage")
                 {
                     var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
                     hitInfo.damageTypes.Scale(Rust.DamageType.Decay, c_boxMultiplier);
@@ -135,7 +135,8 @@ namespace Oxide.Plugins
                         entity.LookupPrefab().name.Contains("Candle") ||
                         entity.LookupPrefab().name.Contains("Strobe") ||
                         entity.LookupPrefab().name.Contains("speaker") ||
-                        entity.LookupPrefab().name.Contains("fog"))
+                        entity.LookupPrefab().name.Contains("fog") ||
+                        entity.LookupPrefab().name.Contains("Graveyard"))
                 {
                     var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
                     hitInfo.damageTypes.Scale(Rust.DamageType.Decay, c_deployablesMultiplier);
