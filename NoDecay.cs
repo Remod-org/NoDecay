@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.35", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
+    [Info("NoDecay", "RFC1920", "1.0.36", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
     [Description("Scales or disables decay of items")]
 
     class NoDecay : RustPlugin
@@ -36,6 +36,7 @@ namespace Oxide.Plugins
 
         private bool c_outputToRcon;
         private bool c_outputMundane;
+        private bool c_usePermission;
         private bool c_requireCupboard;
         private bool c_CupboardEntity;
         private float c_cupboardRange;
@@ -46,6 +47,11 @@ namespace Oxide.Plugins
         void Loaded() => LoadConfigValues();
 
         protected override void LoadDefaultConfig() => Puts("New configuration file created.");
+
+        void Init()
+        {
+            permission.RegisterPermission("nodecay.use", this);
+        }
 
         void LoadConfigValues()
         {
@@ -74,6 +80,7 @@ namespace Oxide.Plugins
 
             c_outputToRcon  = Convert.ToBoolean(GetConfigValue("Debug", "outputToRcon", false));
             c_outputMundane = Convert.ToBoolean(GetConfigValue("Debug", "outputMundane", false));
+            c_usePermission = Convert.ToBoolean(GetConfigValue("Global", "usePermission", false));
 
             try
             {
@@ -157,6 +164,23 @@ namespace Oxide.Plugins
             var tick = DateTime.Now;
 
             entity_name = entity.LookupPrefab().name;
+            var owner = entity.OwnerID.ToString();
+            if(c_usePermission)
+            {
+                if(permission.UserHasPermission(owner, "nodecay.use") || owner == "0")
+                {
+                    if(owner != "0")
+                    {
+                        OutputRcon($"{entity_name} owner {owner} has NoDecay permission!");
+                    }
+                }
+                else
+                {
+                    OutputRcon($"{entity_name} owner {owner} does NOT have NoDecay permission.  Standard decay in effect.");
+                    return;
+                }
+            }
+
             try
             {
                 if (!hitInfo.damageTypes.Has(Rust.DamageType.Decay)) return;
