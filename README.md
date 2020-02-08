@@ -20,10 +20,14 @@ Note, the default is cupboardCheckEntity: false, which will skip checking for cu
     "Global": {
     "blockCupboardResources": false,
     "blockCupboardWood": false,
+    "blockCupboardStone": false,
+    "blockCupboardMetal": false,
+    "blockCupboardArmor": false,
     "requireCupboard": false,
     "cupboardCheckEntity": false,
     "cupboardRange": 30.0,
-    "usePermission": false
+    "usePermission": false,
+    "DestroyOnZero": false
   },
   "Mutipliers": {
     "armoredMultiplier": 0.0,
@@ -62,7 +66,13 @@ If "blockCupboardWood" is set to true, blocks wood from being added to a cupboar
 
   - Use both of these to prevent all building materials from being added to cupboards.  Players will still get the Building Decaying warning but will not waste resources on upkeep since they are not necessary with NoDecay.
  
-  - Use only blockCupboardWood to block wood and therefore upkeep on twig.
+  - Use only blockCupboardWood to block wood and therefore upkeep on twig.  You may also set the following instead of blockCupboardResources:
+
+If "blockCupboardStone" is set to true, blocks stone from being added to a cupboard.
+
+If "blockCupboardMetal" is set to true, blocks metal frags from being added to a cupboard.
+
+If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboard.
  
  Set requireCupboard to true to check for a cupboard to prevent decay.
 
@@ -70,6 +80,8 @@ If "blockCupboardWood" is set to true, blocks wood from being added to a cupboar
 
  Set cupboardRange to a desired value for the cupboardCheckEntity range.  If too high, may affect other user's stuff.  If set too low it may not protect external items if out of range.
  
+ Set DestroyOnZero to true to enable destroying entities when health is zero.  This is most likely needed due to a bug in the Feb 2020 Rust.
+
 ## Permissions
 
 If the "usePermission" flag is set to true, the following permission is required to enable NoDecay for a user:
