@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.41", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
+    [Info("NoDecay", "RFC1920", "1.0.42", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
     [Description("Scales or disables decay of items")]
 
     class NoDecay : RustPlugin
@@ -40,8 +40,12 @@ namespace Oxide.Plugins
         private bool c_usePermission;
         private bool c_requireCupboard;
         private bool c_CupboardEntity;
+        private bool c_DestroyOnZero;
         private bool c_blockCupboardResources;
         private bool c_blockCupboardWood;
+        private bool c_blockCupboardStone;
+        private bool c_blockCupboardMetal;
+        private bool c_blockCupboardArmor;
         private float c_cupboardRange;
 
         private bool g_configChanged;
@@ -84,8 +88,12 @@ namespace Oxide.Plugins
             c_outputToRcon  = Convert.ToBoolean(GetConfigValue("Debug", "outputToRcon", false));
             c_outputMundane = Convert.ToBoolean(GetConfigValue("Debug", "outputMundane", false));
             c_usePermission = Convert.ToBoolean(GetConfigValue("Global", "usePermission", false));
+            c_DestroyOnZero = Convert.ToBoolean(GetConfigValue("Global", "DestroyOnZero", false));
             c_blockCupboardResources = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardResources", false));
-            c_blockCupboardWood = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardWood", false));
+            c_blockCupboardWood  = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardWood", false));
+            c_blockCupboardStone = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardStone", false));
+            c_blockCupboardMetal = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardMetal", false));
+            c_blockCupboardArmor = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardArmor", false));
 
             try
             {
@@ -167,6 +175,7 @@ namespace Oxide.Plugins
         private object CanMoveItem(Item item, PlayerInventory inventory, uint targetContainer, int targetSlot)
         {
             if(!(c_blockCupboardResources || c_blockCupboardWood)) return null;
+            if(!(c_blockCupboardStone || c_blockCupboardMetal || c_blockCupboardArmor)) return null;
             if(item == null) return null;
             if(targetContainer == null) return null;
 
@@ -189,6 +198,14 @@ namespace Oxide.Plugins
                         OutputRcon($"Player tried to add {res} to a cupboard!");
                         return false;
                     }
+                    else if(
+                        (res.Contains("stones") && c_blockCupboardStone)
+                        || (res.Contains("metal.frag") && c_blockCupboardMetal)
+                        || (res.Contains("metal.refined") && c_blockCupboardArmor))
+                    {
+                        OutputRcon($"Player tried to add {res} to a cupboard!");
+                        return false;
+                    }
                 }
             }
             catch {}
@@ -204,6 +221,7 @@ namespace Oxide.Plugins
             DateTime tick = DateTime.Now;
             string entity_name = entity.LookupPrefab().name;
             string owner = entity.OwnerID.ToString();
+            bool mundane = false;
 
             if(c_usePermission)
             {
@@ -233,14 +251,12 @@ namespace Oxide.Plugins
                 else if(entity_name == "campfire" || entity_name == "skull_fire_pit")
                 {
                     damageAmount = before * c_campfireMultiplier;
-                    OutputRcon($"Decay campfire before: {before} after: {damageAmount}");
                 }
                 else if(entity_name == "box.wooden.large" ||
                         entity_name == "woodbox_deployed" ||
                         entity_name == "CoffinStorage")
                 {
                     damageAmount = before * c_boxMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name.Contains("deployed") ||
                         entity_name.Contains("reinforced") ||
@@ -281,32 +297,27 @@ namespace Oxide.Plugins
                 else if(entity_name.Contains("furnace"))
                 {
                     damageAmount = before * c_furnaceMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name.Contains("sedan"))
                 {
                     damageAmount = before * c_sedanMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name == "SAM_Static")
                 {
                     damageAmount = before * c_samMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name == "HotAirBalloon")
                 {
                     damageAmount = before * c_baloonMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}", true);
+                    mundane = true;
                 }
                 else if(entity_name == "BBQ.Deployed")
                 {
                     damageAmount = before * c_bbqMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name.Contains("watchtower"))
                 {
                     damageAmount = before * c_watchtowerMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name == "WaterBarrel" ||
                         entity_name == "jackolantern.angry" ||
@@ -315,64 +326,56 @@ namespace Oxide.Plugins
                         entity_name == "water_catcher_large")
                 {
                     damageAmount = before * c_deployablesMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name == "beartrap" ||
                         entity_name == "landmine" ||
                         entity_name == "spikes.floor")
                 {
                     damageAmount = before * c_trapMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name.Contains("barricade"))
                 {
                     damageAmount = before * c_barricadeMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name == "gates.external.high.stone")
                 {
                     damageAmount = before * c_highStoneWallMultiplier;
-                    OutputRcon($"Decay (high stone gate) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name == "gates.external.high.wood")
                 {
                     damageAmount = before * c_highWoodWallMultiplier;
-                    OutputRcon($"Decay (high wood gate) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name == "wall.external.high.stone")
                 {
                     damageAmount = before * c_highStoneWallMultiplier;
-                    OutputRcon($"Decay (high stone wall) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name == "wall.external.high.wood")
                 {
                     damageAmount = before * c_highWoodWallMultiplier;
-                    OutputRcon($"Decay (high wood wall) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name == "mining.pumpjack")
                 {
                     damageAmount = 0.0f;
-                    OutputRcon($"Decay (pumpjack) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name == "Rowboat" || entity_name == "RHIB")
                 {
                     damageAmount = before * c_boatMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}", true);
+                    mundane = true;
                 }
                 else if(entity_name == "minicopter.entity")
                 {
                     damageAmount = before * c_minicopterMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}", true);
+                    mundane = true;
                 }
                 else if(entity_name.Contains("TestRidableHorse"))
                 {
                     damageAmount = before * c_horseMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}", true);
+                    mundane = true;
                 }
                 else if(entity_name == "ScrapTransportHelicopter")
                 {
                     damageAmount = before * c_scrapcopterMultiplier;
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}", true);
+                    mundane = true;
                 }
                 else
                 {
@@ -382,8 +385,14 @@ namespace Oxide.Plugins
 
                 NextTick(() =>
                 {
-                    OutputRcon($"Running NextTick for ({entity_name}) before: {before} after: {damageAmount}");
+                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
                     entity.health -= damageAmount;
+                    if(entity.health == 0 && c_DestroyOnZero)
+                    {
+                        OutputRcon($"Entity completely decayed - destroying!", mundane);
+                        if(entity == null) return;
+                        entity.Kill(BaseNetworkable.DestroyMode.Gib);
+                    }
                 });
                 return true; // Cancels this hook for any of the entities above unless unsupported.
             }
@@ -413,7 +422,7 @@ namespace Oxide.Plugins
             {
 
                 OutputRcon($"NoDecay checking for local cupboard.");
-                hascup = CheckCupboardBlock(block, entity.LookupPrefab().name);
+                hascup = CheckCupboardBlock(block, entity.LookupPrefab().name, block.grade.ToString().ToLower());
             }
             else
             {
@@ -490,11 +499,11 @@ namespace Oxide.Plugins
         }
 
         // Check that a building block is owned by/attached to a cupboard
-        private bool CheckCupboardBlock(BuildingBlock block, string ename = "unknown")
+        private bool CheckCupboardBlock(BuildingBlock block, string ename = "unknown", string grade = "")
         {
             BuildingManager.Building building = block.GetBuilding();
 
-            OutputRcon($"CheckCupboardBlock:   Checking for cupboard connected to {ename}.");
+            OutputRcon($"CheckCupboardBlock:   Checking for cupboard connected to {grade} {ename}.");
 
             if(building != null)
             {
