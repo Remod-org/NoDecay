@@ -1,6 +1,8 @@
 # NoDecay
 Scales or disables decay of items, and deployables 
 
+[Download](https://code.remod.org/NoDecay.cs)
+
 **No Decay** nullifies or scales down/up any decay damage applied to any item in game (except of small stashes). Each building tier has a different multiplier,  so do all other entities.
 
 The default configuration does **NOT** affect *Twig decay* but nullifies all damage on all other items.
