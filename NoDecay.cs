@@ -6,9 +6,9 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.42", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
+    [Info("NoDecay", "RFC1920", "1.0.43", ResourceId = 1160)]
+    //Original Credit to Deicide666ra/Piarb and Diesel_42o
     [Description("Scales or disables decay of items")]
-
     class NoDecay : RustPlugin
     {
         private float c_twigMultiplier;
@@ -271,6 +271,7 @@ namespace Oxide.Plugins
                         entity_name.Contains("fence") ||
                         entity_name.Contains("grill") ||
                         entity_name.Contains("Candle") ||
+                        entity_name.Contains("candle") ||
                         entity_name.Contains("Strobe") ||
                         entity_name.Contains("speaker") ||
                         entity_name.Contains("Fog") ||
@@ -282,7 +283,7 @@ namespace Oxide.Plugins
                         // If not, multiplier will be standard of 1.0f.
                         OutputRcon($"NoDecay checking for local cupboard.");
 
-                        if(CheckCupboard(entity))
+                        if(CheckCupboardEntity(entity))
                         {
                             damageAmount = before * c_deployablesMultiplier;
                         }
@@ -394,7 +395,7 @@ namespace Oxide.Plugins
                         entity.Kill(BaseNetworkable.DestroyMode.Gib);
                     }
                 });
-                return true; // Cancels this hook for any of the entities above unless unsupported.
+                return true; // Cancels this hook for any of the entities above unless unsupported (for decay only).
             }
             finally
             {
@@ -508,15 +509,13 @@ namespace Oxide.Plugins
             if(building != null)
             {
                 // cupboard overlap.  Block safe from decay.
-                //if(building.buildingPrivileges == null) // OR Privs: ListHashSet`1[BuildingPrivlidge]
-                if(building.GetDominatingBuildingPrivilege() == null) // OR Privs: ListHashSet`1[BuildingPrivlidge]
+                if(building.GetDominatingBuildingPrivilege() == null)
                 {
                     OutputRcon($"CheckCupboardBlock:     Block NOT owned by cupboard!");
                     return false;
                 }
 
                 OutputRcon($"CheckCupboardBlock:     Block owned by cupboard!");
-                //Puts($"Privs: {building.buildingPrivileges}");
                 return true;
             }
             else
@@ -527,40 +526,23 @@ namespace Oxide.Plugins
         }
 
         // Non-block entity check
-        bool CheckCupboard(BaseEntity entity)
+        bool CheckCupboardEntity(BaseEntity entity)
         {
             int targetLayer = LayerMask.GetMask("Construction", "Construction Trigger", "Trigger", "Deployed");
-            Collider[] hit = Physics.OverlapSphere(entity.transform.position, c_cupboardRange, targetLayer);
+            List<BuildingPrivlidge> cups = new List<BuildingPrivlidge>();
+            Vis.Entities<BuildingPrivlidge>(entity.transform.position, c_cupboardRange, cups, targetLayer);
 
-            if(c_outputToRcon)
+            OutputRcon($"CheckCupboardEntity:   Checking for cupboard within {c_cupboardRange.ToString()}m of {entity.ShortPrefabName}.");
+
+            if(cups.Count > 0)
             {
-                string hits = hit.Length.ToString();
-                string name = entity.name.ToString();
-                string range = c_cupboardRange.ToString();
-                Puts($"NoDecay Checking for cupboard within {range}m of {name}.  Found {hits} layer hits.");
-            }
-            // loop through hit layers and check for 'Building Privlidge'
-            foreach(var ent in hit)
-            {
-                BuildingPrivlidge privs = ent.GetComponentInParent<BuildingPrivlidge>();
-                if(privs != null)
-                {
-                    // cupboard overlap.  Entity safe from decay
-                    OutputRcon($"Found entity layer in range of cupboard!");
-                    return true;
-                }
+                // cupboard overlap.  Entity safe from decay.
+                OutputRcon($"CheckCupboardEntity:     Found entity layer in range of cupboard!");
+                return true;
             }
 
-            if(hit.Length > 0)
-            {
-                OutputRcon($"Unable to find entity layer in range of cupboard.");
-                return false;
-            }
-            else
-            {
-                OutputRcon($"NoDecay unable to check for cupboard.");
-            }
-            return true;
+            OutputRcon($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.");
+            return false;
         }
     }
 }
