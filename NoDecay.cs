@@ -8,6 +8,7 @@ namespace Oxide.Plugins
 {
     [Info("NoDecay", "RFC1920", "1.0.44", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
+    // Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
     class NoDecay : RustPlugin
     {
