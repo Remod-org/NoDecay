@@ -94,3 +94,5 @@ nodecay.use
 
 - **Deicide666ra** and **Piarb**, the original authors of this plugin
 - **Diesel**, for helping maintain the plugin
+
+Thanks to Deicide666ra, the original author of this plugin, for his permission to continue his work.
