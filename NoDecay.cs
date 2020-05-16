@@ -1,264 +1,33 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Oxide.Core;
 using Oxide.Core.Plugins;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.45", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.46", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     // Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
     class NoDecay : RustPlugin
     {
-        private float c_twigMultiplier;
-        private float c_woodMultiplier;
-        private float c_stoneMultiplier;
-        private float c_sheetMultiplier;
-        private float c_armoredMultiplier;
+        private ConfigData configData;
+        private bool enabled = true;
 
-        private float c_campfireMultiplier;
-        private float c_highWoodWallMultiplier;
-        private float c_highStoneWallMultiplier;
-        private float c_barricadeMultiplier;
-        private float c_trapMultiplier;
-        private float c_deployablesMultiplier;
-        private float c_boxMultiplier;
-        private float c_sedanMultiplier;
-        private float c_samMultiplier;
-        private float c_baloonMultiplier;
-        private float c_furnaceMultiplier;
-        private float c_bbqMultiplier;
-        private float c_boatMultiplier;
-        private float c_minicopterMultiplier;
-        private float c_scrapcopterMultiplier;
-        private float c_watchtowerMultiplier;
-        private float c_horseMultiplier;
-
-        private bool c_outputToRcon;
-        private bool c_outputMundane;
-        private bool c_usePermission;
-        private bool c_requireCupboard;
-        private bool c_CupboardEntity;
-        private bool c_DestroyOnZero;
-        private bool c_blockCupboardResources;
-        private bool c_blockCupboardWood;
-        private bool c_blockCupboardStone;
-        private bool c_blockCupboardMetal;
-        private bool c_blockCupboardArmor;
-        private float c_cupboardRange;
-
-        private bool g_configChanged;
-
-        void Loaded() => LoadConfigValues();
-
-        protected override void LoadDefaultConfig() => Puts("New configuration file created.");
-
+        #region main
         void Init()
         {
             permission.RegisterPermission("nodecay.use", this);
             permission.RegisterPermission("nodecay.admin", this);
         }
 
-        void LoadConfigValues()
-        {
-            c_twigMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "twigMultiplier", 1.0));
-            c_woodMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "woodMultiplier", 0.0));
-            c_stoneMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "stoneMultiplier", 0.0));
-            c_sheetMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "sheetMultiplier", 0.0));
-            c_armoredMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "armoredMultiplier", 0.0));
-
-            c_deployablesMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "deployablesMultiplier", 0.0));
-            c_watchtowerMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "watchtowerMultiplier", 0.0));
-            c_horseMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "horseMultiplier", 0.0));
-            c_boxMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "boxMultiplier", 0.0));
-            c_sedanMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "sedanMultiplier", 0.0));
-            c_baloonMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "baloonMultiplier", 0.0));
-            c_furnaceMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "furnaceMultiplier", 0.0));
-            c_bbqMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "bbqMultiplier", 0.0));
-            c_samMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "samMultiplier", 0.0));
-            c_campfireMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "campfireMultiplier", 0.0));
-            c_barricadeMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "barricadesMultiplier", 0.0));
-            c_trapMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "trapMultiplier", 0.0));
-            c_highWoodWallMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "highWoodWallMultiplier", 0.0));
-            c_highStoneWallMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "highStoneWallMultiplier", 0.0));
-            c_boatMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "boatMultiplier", 0.0));
-            c_minicopterMultiplier  = Convert.ToSingle(GetConfigValue("Mutipliers", "minicopterMultiplier", 0.0));
-            c_scrapcopterMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "scrapcopterMultiplier", 0.0));
-
-            c_outputToRcon  = Convert.ToBoolean(GetConfigValue("Debug", "outputToRcon", false));
-            c_outputMundane = Convert.ToBoolean(GetConfigValue("Debug", "outputMundane", false));
-            c_usePermission = Convert.ToBoolean(GetConfigValue("Global", "usePermission", false));
-            c_DestroyOnZero = Convert.ToBoolean(GetConfigValue("Global", "DestroyOnZero", true));
-            c_requireCupboard = Convert.ToBoolean(GetConfigValue("Global", "requireCupboard", false));
-            c_CupboardEntity = Convert.ToBoolean(GetConfigValue("Global", "cupboardCheckEntity", false));
-            c_cupboardRange = Convert.ToSingle(GetConfigValue("Global", "cupboardRange", 30.0));
-            c_blockCupboardResources = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardResources", false));
-            c_blockCupboardWood  = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardWood", false));
-            c_blockCupboardStone = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardStone", false));
-            c_blockCupboardMetal = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardMetal", false));
-            c_blockCupboardArmor = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardArmor", false));
-
-            if (g_configChanged)
-            {
-                Puts("Configuration file updated.");
-                SaveConfig();
-            }
-        }
-
-        object GetConfigValue(string category, string setting, object defaultValue)
-        {
-            Dictionary<string, object> data = Config[category] as Dictionary<string, object>;
-            object value;
-
-            if(data == null)
-            {
-                data = new Dictionary<string, object>();
-                Config[category] = data;
-                g_configChanged = true;
-            }
-
-            if(data.TryGetValue(setting, out value)) return value;
-            value = defaultValue;
-            data[setting] = value;
-            g_configChanged = true;
-            return value;
-        }
-
-        [ChatCommand("nodecay")]
-        void CmdInfo(BasePlayer player, string command, string[] args)
-        {
-            if (!permission.UserHasPermission(player.UserIDString, "nodecay.admin")) return;
-            if(args.Length > 0)
-            {
-                if(args[0] == "log")
-                {
-                    c_outputToRcon = !c_outputToRcon;
-                    SendReply(player, $"Debug logging set to {c_outputToRcon.ToString()}");
-                }
-                else if(args[0] == "info")
-                {
-                    string info = "NoDecay current settings";
-                    info += "\n\ttwigMultiplier: " + c_twigMultiplier.ToString();
-                    info += "\n\twoodMultiplier: " + c_woodMultiplier.ToString();
-                    info += "\n\tstoneMultiplier: " + c_stoneMultiplier.ToString();
-                    info += "\n\tsheetMultiplier: " + c_sheetMultiplier.ToString();
-                    info += "\n\tarmoredMultiplier: " + c_armoredMultiplier.ToString();
-                    info += "\n\tcampfireMultiplier " + c_campfireMultiplier.ToString();
-                    info += "\n\thighWoodWallMultiplier: " + c_highWoodWallMultiplier.ToString();
-                    info += "\n\thighStoneWallMultiplier: " + c_highStoneWallMultiplier.ToString();
-                    info += "\n\tbarricadeMultiplier: " + c_barricadeMultiplier.ToString();
-                    info += "\n\ttrapMultiplier: " + c_trapMultiplier.ToString();
-                    info += "\n\tdeployablesMultiplier: " + c_deployablesMultiplier.ToString();
-                    info += "\n\tboxMultiplier: " + c_boxMultiplier.ToString();
-                    info += "\n\tsedanMultiplier: " + c_sedanMultiplier.ToString();
-                    info += "\n\tsamMultiplier: " + c_samMultiplier.ToString();
-                    info += "\n\tbaloonMultiplier: " + c_baloonMultiplier.ToString();
-                    info += "\n\tfurnaceMultiplier: " + c_furnaceMultiplier.ToString();
-                    info += "\n\tbbqMultiplier: " + c_bbqMultiplier.ToString();
-                    info += "\n\tboatMultiplier: " + c_boatMultiplier.ToString();
-                    info += "\n\tminicopterMultiplier: " + c_minicopterMultiplier.ToString();
-                    info += "\n\tscrapcopterMultiplier: " + c_scrapcopterMultiplier.ToString();
-                    info += "\n\twatchtowerMultiplier: " + c_watchtowerMultiplier.ToString();
-                    info += "\n\thorseMultiplier: " + c_horseMultiplier.ToString();
-                    info += "\n\n\tusePermission: " + c_usePermission.ToString();
-                    info += "\n\tDestroyOnZero: " + c_DestroyOnZero.ToString();
-                    info += "\n\trequireCupboard: " + c_requireCupboard.ToString();
-                    info += "\n\tCupboardEntity: " + c_CupboardEntity.ToString();
-                    info += "\n\tcupboardRange: " + c_cupboardRange.ToString();
-                    info += "\n\tblockCupboardResources: " + c_blockCupboardResources.ToString();
-                    info += "\n\tblockCupboardWood: " + c_blockCupboardWood.ToString();
-                    info += "\n\tblockCupboardStone: " + c_blockCupboardStone.ToString();
-                    info += "\n\tblockCupboardMetal: " + c_blockCupboardMetal.ToString();
-                    info += "\n\tblockCupboardArmor: " + c_blockCupboardArmor.ToString();
-
-                    SendReply(player, info);
-                    info = null;
-                }
-            }
-        }
-
-        [HookMethod("SendHelpText")]
-        private void SendHelpText(BasePlayer player)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.Append("<color=#05eb59>" + Name + " " + Version + "</color> · Controls decay\n");
-            sb.Append("  · ").AppendLine($"twig={c_twigMultiplier} - campfire={c_campfireMultiplier}");
-            sb.Append("  · ").Append($"wood ={ c_woodMultiplier} - stone ={ c_stoneMultiplier} - sheet ={ c_sheetMultiplier} - armored ={ c_armoredMultiplier}\n");
-
-            if(c_requireCupboard == true)
-            {
-                if(c_CupboardEntity == true)
-                {
-                    string range = c_cupboardRange.ToString();
-                    sb.Append("  · ").Append($"cupboard check ={ true } - entity range ={ range }");
-                }
-                else
-                {
-                    sb.Append("  · ").Append($"cupboard check ={ true } - entity check ={ false }");
-                }
-            }
-            else
-            {
-                sb.Append("  · ").Append($"cupboard check ={ false }");
-            }
-            player.ChatMessage(sb.ToString());
-        }
-
-        // Just here to cleanup the code a bit
-        private void OutputRcon(string message, bool mundane = false)
-        {
-            if(c_outputToRcon)
-            {
-                if(!mundane) Puts($"{message}");
-                else if(mundane && c_outputMundane) Puts($"{message}");
-            }
-        }
-
-        // Prevent players from adding building resources to cupboard
-        private object CanMoveItem(Item item, PlayerInventory inventory, uint targetContainer, int targetSlot)
-        {
-            if(!(c_blockCupboardResources || c_blockCupboardWood)) return null;
-            if(!(c_blockCupboardStone || c_blockCupboardMetal || c_blockCupboardArmor)) return null;
-            if(item == null) return null;
-            if(targetContainer == 0) return null;
-
-            ItemContainer container = inventory.FindContainer(targetContainer);
-
-            try
-            {
-                var cup = container.entityOwner as BaseEntity;
-
-                if(cup.name.Contains("cupboard.tool"))
-                {
-                    string res = item.info.shortname;
-                    if(res.Contains("wood") && c_blockCupboardWood)
-                    {
-                        OutputRcon($"Player tried to add {res} to a cupboard!");
-                        return false;
-                    }
-                    else if((res.Contains("stones") || res.Contains("metal.frag") || res.Contains("metal.refined")) && c_blockCupboardResources)
-                    {
-                        OutputRcon($"Player tried to add {res} to a cupboard!");
-                        return false;
-                    }
-                    else if(
-                        (res.Contains("stones") && c_blockCupboardStone)
-                        || (res.Contains("metal.frag") && c_blockCupboardMetal)
-                        || (res.Contains("metal.refined") && c_blockCupboardArmor))
-                    {
-                        OutputRcon($"Player tried to add {res} to a cupboard!");
-                        return false;
-                    }
-                }
-            }
-            catch {}
-            return null;
-        }
+        void Loaded() => LoadConfigValues();
 
         object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitInfo)
         {
+            if (!enabled) return null;
             if(entity == null || hitInfo == null) return null;
             if(!hitInfo.damageTypes.Has(Rust.DamageType.Decay)) return null;
 
@@ -268,7 +37,7 @@ namespace Oxide.Plugins
             string owner = entity.OwnerID.ToString();
             bool mundane = false;
 
-            if(c_usePermission)
+            if(configData.Global.usePermission)
             {
                 if(permission.UserHasPermission(owner, "nodecay.use") || owner == "0")
                 {
@@ -294,13 +63,13 @@ namespace Oxide.Plugins
                 }
                 else if(entity_name == "campfire" || entity_name == "skull_fire_pit")
                 {
-                    damageAmount = before * c_campfireMultiplier;
+                    damageAmount = before * configData.Multipliers.campfireMultiplier;
                 }
                 else if(entity_name == "box.wooden.large" ||
                      entity_name == "woodbox_deployed" ||
                      entity_name == "CoffinStorage")
                 {
-                    damageAmount = before * c_boxMultiplier;
+                    damageAmount = before * configData.Multipliers.boxMultiplier;
                 }
                 else if(entity_name.Contains("deployed") ||
                      entity_name.Contains("reinforced") ||
@@ -322,72 +91,72 @@ namespace Oxide.Plugins
                      entity_name.Contains("composter") ||
                      entity_name.Contains("Graveyard"))
                 {
-                     if (c_requireCupboard && c_CupboardEntity)
+                     if (configData.Global.requireCupboard && configData.Global.cupboardCheckEntity)
                      {
                          // Verify that we should check for a cupboard and ensure that one exists.
                          // If not, multiplier will be standard of 1.0f.
                          OutputRcon($"NoDecay checking for local cupboard.");
-                         
+
                          if (CheckCupboardEntity(entity))
                          {
-                             damageAmount = before * c_deployablesMultiplier;
+                             damageAmount = before * configData.Multipliers.deployablesMultiplier;
                          }
                      }
                      else
                      {
-                         damageAmount = before * c_deployablesMultiplier;
+                         damageAmount = before * configData.Multipliers.deployablesMultiplier;
                      }
 
                     OutputRcon($"Decay({entity_name}) before: {before} after: {damageAmount}");
                 }
                 else if(entity_name.Contains("furnace"))
                 {
-                    damageAmount = before * c_furnaceMultiplier;
+                    damageAmount = before * configData.Multipliers.furnaceMultiplier;
                 }
                 else if(entity_name.Contains("sedan"))
                 {
-                    damageAmount = before * c_sedanMultiplier;
+                    damageAmount = before * configData.Multipliers.sedanMultiplier;
                 }
                 else if(entity_name == "SAM_Static")
                 {
-                    damageAmount = before * c_samMultiplier;
+                    damageAmount = before * configData.Multipliers.samMultiplier;
                 }
                 else if(entity_name == "HotAirBalloon")
                 {
-                    damageAmount = before * c_baloonMultiplier;
+                    damageAmount = before * configData.Multipliers.baloonMultiplier;
                     mundane = true;
                 }
                 else if(entity_name == "BBQ.Deployed")
                 {
-                    damageAmount = before * c_bbqMultiplier;
+                    damageAmount = before * configData.Multipliers.bbqMultiplier;
                 }
                 else if(entity_name.Contains("watchtower"))
                 {
-                    damageAmount = before * c_watchtowerMultiplier;
+                    damageAmount = before * configData.Multipliers.watchtowerMultiplier;
                 }
                 else if(entity_name == "WaterBarrel" ||
                         entity_name.Contains("jackolantern") ||
                         entity_name.Contains("water_catcher"))
                 {
-                    damageAmount = before * c_deployablesMultiplier;
+                    damageAmount = before * configData.Multipliers.deployablesMultiplier;
                 }
                 else if(entity_name == "beartrap" ||
                         entity_name == "landmine" ||
                         entity_name == "spikes.floor")
                 {
-                    damageAmount = before * c_trapMultiplier;
+                    damageAmount = before * configData.Multipliers.trapMultiplier;
                 }
                 else if(entity_name.Contains("barricade"))
                 {
-                    damageAmount = before * c_barricadeMultiplier;
+                    damageAmount = before * configData.Multipliers.barricadeMultiplier;
                 }
                 else if(entity_name == "gates.external.high.stone" || entity_name == "wall.external.high.stone")
                 {
-                    damageAmount = before * c_highStoneWallMultiplier;
+                    damageAmount = before * configData.Multipliers.highStoneWallMultiplier;
                 }
                 else if(entity_name == "gates.external.high.wood" || entity_name == "wall.external.high.wood")
                 {
-                    damageAmount = before * c_highWoodWallMultiplier;
+                    damageAmount = before * configData.Multipliers.highWoodWallMultiplier;
                 }
                 else if(entity_name == "mining.pumpjack")
                 {
@@ -395,22 +164,22 @@ namespace Oxide.Plugins
                 }
                 else if(entity_name == "Rowboat" || entity_name == "RHIB")
                 {
-                    damageAmount = before * c_boatMultiplier;
+                    damageAmount = before * configData.Multipliers.boatMultiplier;
                     mundane = true;
                 }
                 else if(entity_name == "minicopter.entity")
                 {
-                    damageAmount = before * c_minicopterMultiplier;
+                    damageAmount = before * configData.Multipliers.minicopterMultiplier;
                     mundane = true;
                 }
                 else if(entity_name.Contains("TestRidableHorse"))
                 {
-                    damageAmount = before * c_horseMultiplier;
+                    damageAmount = before * configData.Multipliers.horseMultiplier;
                     mundane = true;
                 }
                 else if(entity_name == "ScrapTransportHelicopter")
                 {
-                    damageAmount = before * c_scrapcopterMultiplier;
+                    damageAmount = before * configData.Multipliers.scrapcopterMultiplier;
                     mundane = true;
                 }
                 else
@@ -423,7 +192,7 @@ namespace Oxide.Plugins
                 {
                     OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
                     entity.health -= damageAmount;
-                    if(entity.health == 0 && c_DestroyOnZero)
+                    if(entity.health == 0 && configData.Global.DestroyOnZero)
                     {
                         OutputRcon($"Entity completely decayed - destroying!", mundane);
                         if(entity == null) return;
@@ -435,7 +204,7 @@ namespace Oxide.Plugins
             finally
             {
                 double ms = (DateTime.Now - tick).TotalMilliseconds;
-                if(ms > 10 || c_outputMundane) Puts($"NoDecay.OnEntityTakeDamage on {entity_name} took {ms} ms to execute.");
+                if(ms > 10 || configData.Debug.outputMundane) Puts($"NoDecay.OnEntityTakeDamage on {entity_name} took {ms} ms to execute.");
             }
         }
 
@@ -454,7 +223,7 @@ namespace Oxide.Plugins
 
             // Verify that we should check for a cupboard and ensure that one exists.
             // If not, multiplier will be standard of 1.0f (hascup true).
-            if(c_requireCupboard == true)
+            if(configData.Global.requireCupboard == true)
             {
 
                 OutputRcon($"NoDecay checking for local cupboard.");
@@ -468,49 +237,49 @@ namespace Oxide.Plugins
             switch(block.grade)
             {
                 case BuildingGrade.Enum.Twigs:
-                    if(hascup) multiplier = c_twigMultiplier;
+                    if(hascup) multiplier = configData.Multipliers.twigMultiplier;
                     type = "twig";
                     break;
                 case BuildingGrade.Enum.Wood:
                     if(isHighWall)
                     {
-                        if(hascup) multiplier = c_highWoodWallMultiplier;
+                        if(hascup) multiplier = configData.Multipliers.highWoodWallMultiplier;
                         type = "high wood wall";
                     }
                     else if(isHighGate)
                     {
-                        if(hascup) multiplier = c_highWoodWallMultiplier;
+                        if(hascup) multiplier = configData.Multipliers.highWoodWallMultiplier;
                         type = "high wood gate";
                     }
                     else
                     {
-                        if(hascup) multiplier = c_woodMultiplier;
+                        if(hascup) multiplier = configData.Multipliers.woodMultiplier;
                         type = "wood";
                     }
                     break;
                 case BuildingGrade.Enum.Stone:
                     if(isHighWall)
                     {
-                        if(hascup) multiplier = c_highStoneWallMultiplier;
+                        if(hascup) multiplier = configData.Multipliers.highStoneWallMultiplier;
                         type = "high stone wall";
                     }
                     else if(isHighGate)
                     {
-                        if(hascup) multiplier = c_highStoneWallMultiplier;
+                        if(hascup) multiplier = configData.Multipliers.highStoneWallMultiplier;
                         type = "high stone gate";
                     }
                     else
                     {
-                        if(hascup) multiplier = c_stoneMultiplier;
+                        if(hascup) multiplier = configData.Multipliers.stoneMultiplier;
                         type = "stone";
                     }
                     break;
                 case BuildingGrade.Enum.Metal:
-                    if(hascup) multiplier = c_sheetMultiplier;
+                    if(hascup) multiplier = configData.Multipliers.sheetMultiplier;
                     type = "sheet";
                     break;
                 case BuildingGrade.Enum.TopTier:
-                    if(hascup) multiplier = c_armoredMultiplier;
+                    if(hascup) multiplier = configData.Multipliers.armoredMultiplier;
                     type = "armored";
                     break;
                 default:
@@ -556,9 +325,9 @@ namespace Oxide.Plugins
         {
             int targetLayer = LayerMask.GetMask("Construction", "Construction Trigger", "Trigger", "Deployed");
             List<BuildingPrivlidge> cups = new List<BuildingPrivlidge>();
-            Vis.Entities<BuildingPrivlidge>(entity.transform.position, c_cupboardRange, cups, targetLayer);
+            Vis.Entities<BuildingPrivlidge>(entity.transform.position, configData.Global.cupboardRange, cups, targetLayer);
 
-            OutputRcon($"CheckCupboardEntity:   Checking for cupboard within {c_cupboardRange.ToString()}m of {entity.ShortPrefabName}.");
+            OutputRcon($"CheckCupboardEntity:   Checking for cupboard within {configData.Global.cupboardRange.ToString()}m of {entity.ShortPrefabName}.");
 
             if(cups.Count > 0)
             {
@@ -570,5 +339,226 @@ namespace Oxide.Plugins
             OutputRcon($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.");
             return false;
         }
+
+        // Prevent players from adding building resources to cupboard if so configured
+        private object CanMoveItem(Item item, PlayerInventory inventory, uint targetContainer, int targetSlot)
+        {
+            if(!(configData.Global.blockCupboardResources || configData.Global.blockCupboardWood)) return null;
+            if(!(configData.Global.blockCupboardStone || configData.Global.blockCupboardMetal || configData.Global.blockCupboardArmor)) return null;
+            if(item == null) return null;
+            if(targetContainer == 0) return null;
+
+            ItemContainer container = inventory.FindContainer(targetContainer);
+
+            try
+            {
+                var cup = container.entityOwner as BaseEntity;
+
+                if(cup.name.Contains("cupboard.tool"))
+                {
+                    string res = item.info.shortname;
+                    if(res.Contains("wood") && configData.Global.blockCupboardWood)
+                    {
+                        OutputRcon($"Player tried to add {res} to a cupboard!");
+                        return false;
+                    }
+                    else if((res.Contains("stones") || res.Contains("metal.frag") || res.Contains("metal.refined")) && configData.Global.blockCupboardResources)
+                    {
+                        OutputRcon($"Player tried to add {res} to a cupboard!");
+                        return false;
+                    }
+                    else if(
+                        (res.Contains("stones") && configData.Global.blockCupboardStone)
+                        || (res.Contains("metal.frag") && configData.Global.blockCupboardMetal)
+                        || (res.Contains("metal.refined") && configData.Global.blockCupboardArmor))
+                    {
+                        OutputRcon($"Player tried to add {res} to a cupboard!");
+                        return false;
+                    }
+                }
+            }
+            catch {}
+            return null;
+        }
+        #endregion
+
+        #region command
+        [ChatCommand("nodecay")]
+        void CmdInfo(BasePlayer player, string command, string[] args)
+        {
+            if (!permission.UserHasPermission(player.UserIDString, "nodecay.admin")) return;
+            if(args.Length > 0)
+            {
+                if(args[0] == "enable")
+                {
+                    enabled = !enabled;
+                    SendReply(player, $"NoDecay enabled set to {enabled.ToString()}");
+                }
+                else if(args[0] == "log")
+                {
+                    configData.Debug.outputToRcon = !configData.Debug.outputToRcon;
+                    SendReply(player, $"Debug logging set to {configData.Debug.outputToRcon.ToString()}");
+                }
+                else if(args[0] == "info")
+                {
+                    string info = "NoDecay current settings";
+                    info += "\n\ttwigMultiplier: " + configData.Multipliers.twigMultiplier.ToString();
+                    info += "\n\twoodMultiplier: " + configData.Multipliers.woodMultiplier.ToString();
+                    info += "\n\tstoneMultiplier: " + configData.Multipliers.stoneMultiplier.ToString();
+                    info += "\n\tsheetMultiplier: " + configData.Multipliers.sheetMultiplier.ToString();
+                    info += "\n\tarmoredMultiplier: " + configData.Multipliers.armoredMultiplier.ToString();
+
+                    info += "\n\tbaloonMultiplier: " + configData.Multipliers.baloonMultiplier.ToString();
+                    info += "\n\tbarricadeMultiplier: " + configData.Multipliers.barricadeMultiplier.ToString();
+                    info += "\n\tbbqMultiplier: " + configData.Multipliers.bbqMultiplier.ToString();
+                    info += "\n\tboatMultiplier: " + configData.Multipliers.boatMultiplier.ToString();
+                    info += "\n\tboxMultiplier: " + configData.Multipliers.boxMultiplier.ToString();
+                    info += "\n\tcampfireMultiplier " + configData.Multipliers.campfireMultiplier.ToString();
+                    info += "\n\tdeployablesMultiplier: " + configData.Multipliers.deployablesMultiplier.ToString();
+                    info += "\n\tfurnaceMultiplier: " + configData.Multipliers.furnaceMultiplier.ToString();
+                    info += "\n\thighWoodWallMultiplier: " + configData.Multipliers.highWoodWallMultiplier.ToString();
+                    info += "\n\thighStoneWallMultiplier: " + configData.Multipliers.highStoneWallMultiplier.ToString();
+                    info += "\n\thorseMultiplier: " + configData.Multipliers.horseMultiplier.ToString();
+                    info += "\n\tminicopterMultiplier: " + configData.Multipliers.minicopterMultiplier.ToString();
+                    info += "\n\tsamMultiplier: " + configData.Multipliers.samMultiplier.ToString();
+                    info += "\n\tscrapcopterMultiplier: " + configData.Multipliers.scrapcopterMultiplier.ToString();
+                    info += "\n\tsedanMultiplier: " + configData.Multipliers.sedanMultiplier.ToString();
+                    info += "\n\ttrapMultiplier: " + configData.Multipliers.trapMultiplier.ToString();
+                    info += "\n\twatchtowerMultiplier: " + configData.Multipliers.watchtowerMultiplier.ToString();
+
+                    info += "\n\n\tEnabled: " + enabled.ToString();
+                    info += "\n\tusePermission: " + configData.Global.usePermission.ToString();
+                    info += "\n\trequireCupboard: " + configData.Global.requireCupboard.ToString();
+                    info += "\n\tCupboardEntity: " + configData.Global.cupboardCheckEntity.ToString();
+                    info += "\n\tcupboardRange: " + configData.Global.cupboardRange.ToString();
+                    info += "\n\tblockCupboardResources: " + configData.Global.blockCupboardResources.ToString();
+                    info += "\n\tblockCupboardWood: " + configData.Global.blockCupboardWood.ToString();
+                    info += "\n\tblockCupboardStone: " + configData.Global.blockCupboardStone.ToString();
+                    info += "\n\tblockCupboardMetal: " + configData.Global.blockCupboardMetal.ToString();
+                    info += "\n\tblockCupboardArmor: " + configData.Global.blockCupboardArmor.ToString();
+
+                    SendReply(player, info);
+                    info = null;
+                }
+            }
+        }
+        #endregion
+
+        #region helpers
+        [HookMethod("SendHelpText")]
+        private void SendHelpText(BasePlayer player)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("<color=#05eb59>" + Name + " " + Version + "</color> · Controls decay\n");
+            sb.Append("  · ").AppendLine($"twig={configData.Multipliers.twigMultiplier} - campfire={configData.Multipliers.campfireMultiplier}");
+            sb.Append("  · ").Append($"wood ={ configData.Multipliers.woodMultiplier} - stone ={ configData.Multipliers.stoneMultiplier} - sheet ={ configData.Multipliers.sheetMultiplier} - armored ={ configData.Multipliers.armoredMultiplier}\n");
+
+            if(configData.Global.requireCupboard == true)
+            {
+                if(configData.Global.cupboardCheckEntity == true)
+                {
+                    string range = configData.Global.cupboardRange.ToString();
+                    sb.Append("  · ").Append($"cupboard check ={ true } - entity range ={ range }");
+                }
+                else
+                {
+                    sb.Append("  · ").Append($"cupboard check ={ true } - entity check ={ false }");
+                }
+            }
+            else
+            {
+                sb.Append("  · ").Append($"cupboard check ={ false }");
+            }
+            player.ChatMessage(sb.ToString());
+        }
+
+        // Just here to cleanup the code a bit
+        private void OutputRcon(string message, bool mundane = false)
+        {
+            if(configData.Debug.outputToRcon)
+            {
+                if(!mundane) Puts($"{message}");
+                else if(mundane && configData.Debug.outputMundane) Puts($"{message}");
+            }
+        }
+        #endregion
+
+        #region config
+        private class ConfigData
+        {
+            public Debug Debug = new Debug();
+            public Global Global = new Global();
+            public Multipliers Multipliers = new Multipliers();
+            public Multipliers Mutipliers = new Multipliers(); // Temporary from old configs
+            public VersionNumber Version;
+        }
+
+        private class Debug
+        {
+            public bool outputToRcon;
+            public bool outputMundane;
+        }
+
+        private class Global
+        {
+            public bool usePermission = false;
+            public bool requireCupboard = false;
+            public bool cupboardCheckEntity = false;
+            public float cupboardRange = 30f;
+            public bool DestroyOnZero = true;
+            public bool blockCupboardResources = false;
+            public bool blockCupboardWood = false;
+            public bool blockCupboardStone = false;
+            public bool blockCupboardMetal = false;
+            public bool blockCupboardArmor = false;
+        }
+
+        private class Multipliers
+        {
+            public float twigMultiplier = 1.0f;
+            public float woodMultiplier = 0f;
+            public float stoneMultiplier = 0f;
+            public float sheetMultiplier = 0f;
+            public float armoredMultiplier = 0f;
+            public float baloonMultiplier = 0f;
+            public float barricadeMultiplier = 0f;
+            public float bbqMultiplier = 0f;
+            public float boatMultiplier = 0f;
+            public float boxMultiplier = 0f;
+            public float campfireMultiplier = 0f;
+            public float deployablesMultiplier = 0f;
+            public float furnaceMultiplier = 0f;
+            public float highWoodWallMultiplier = 0f;
+            public float highStoneWallMultiplier = 0f;
+            public float horseMultiplier = 0f;
+            public float minicopterMultiplier = 0f;
+            public float samMultiplier = 0f;
+            public float scrapcopterMultiplier = 0f;
+            public float sedanMultiplier = 0f;
+            public float trapMultiplier = 0f;
+            public float watchtowerMultiplier = 0f;
+        }
+
+        protected override void LoadDefaultConfig() => Puts("New configuration file created.");
+
+        void LoadConfigValues()
+        {
+            configData = Config.ReadObject<ConfigData>();
+            if (configData.Version < new VersionNumber(1, 0, 46) || configData.Version == null)
+            {
+                Puts("Upgrading config file...");
+                configData.Multipliers = configData.Mutipliers;
+                configData.Mutipliers = null;
+            }
+            configData.Version = Version;
+
+            SaveConfig(configData);
+        }
+
+        private void SaveConfig(ConfigData config)
+        {
+            Config.WriteObject(config, true);
+        }
+        #endregion
     }
 }
