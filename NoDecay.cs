@@ -27,7 +27,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.64", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.65", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -83,7 +83,7 @@ namespace Oxide.Plugins
         {
             long lc = 0;
             lastConnected.TryGetValue(player.Id, out lc);
-            if(lc > 0)
+            if (lc > 0)
             {
                 lastConnected[player.Id] = ToEpochTime(DateTime.UtcNow);
             }
@@ -134,7 +134,7 @@ namespace Oxide.Plugins
                     return null;
                 }
             }
-            if(configData.Global.protectedDays > 0 && entity.OwnerID > 0)
+            if (configData.Global.protectedDays > 0 && entity.OwnerID > 0)
             {
                 long lc = 0;
                 lastConnected.TryGetValue(entity.OwnerID.ToString(), out lc);
@@ -219,10 +219,10 @@ namespace Oxide.Plugins
                 {
                     OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
                     entity.health -= damageAmount;
-                    if(entity.health == 0 && configData.Global.DestroyOnZero)
+                    if (entity.health == 0 && configData.Global.DestroyOnZero)
                     {
                         OutputRcon($"Entity {entity_name} completely decayed - destroying!", mundane);
-                        if(entity == null) return;
+                        if (entity == null) return;
                         entity.Kill(BaseNetworkable.DestroyMode.Gib);
                     }
                 });
@@ -231,7 +231,7 @@ namespace Oxide.Plugins
             finally
             {
                 double ms = (DateTime.Now - tick).TotalMilliseconds;
-                if(ms > configData.Global.warningTime || configData.Debug.outputMundane) Puts($"NoDecay.OnEntityTakeDamage on {entity_name} took {ms} ms to execute.");
+                if (ms > configData.Global.warningTime || configData.Debug.outputMundane) Puts($"NoDecay.OnEntityTakeDamage on {entity_name} took {ms} ms to execute.");
             }
         }
 
@@ -243,7 +243,7 @@ namespace Oxide.Plugins
             Vis.Entities(car.transform.position, 1f, ents);
             foreach(var ent in ents)
             {
-                if(ent.name.Contains("module_car_spawned") && !ent.IsDestroyed)
+                if (ent.name.Contains("module_car_spawned") && !ent.IsDestroyed)
                 {
                     OutputRcon($"Killing {ent.ShortPrefabName}");
                     ent.Kill(BaseNetworkable.DestroyMode.Gib);
@@ -402,7 +402,7 @@ namespace Oxide.Plugins
 
             // Verify that we should check for a cupboard and ensure that one exists.
             // If not, multiplier will be standard of 1.0f (hascup true).
-            if(configData.Global.requireCupboard == true)
+            if (configData.Global.requireCupboard == true)
             {
 
                 OutputRcon($"NoDecay checking for local cupboard.");
@@ -416,49 +416,49 @@ namespace Oxide.Plugins
             switch(block.grade)
             {
                 case BuildingGrade.Enum.Twigs:
-                    if(hascup) multiplier = configData.multipliers["twig"];
+                    if (hascup) multiplier = configData.multipliers["twig"];
                     type = "twig";
                     break;
                 case BuildingGrade.Enum.Wood:
-                    if(isHighWall)
+                    if (isHighWall)
                     {
-                        if(hascup) multiplier = configData.multipliers["highWoodWall"];
+                        if (hascup) multiplier = configData.multipliers["highWoodWall"];
                         type = "high wood wall";
                     }
-                    else if(isHighGate)
+                    else if (isHighGate)
                     {
-                        if(hascup) multiplier = configData.multipliers["highWoodWall"];
+                        if (hascup) multiplier = configData.multipliers["highWoodWall"];
                         type = "high wood gate";
                     }
                     else
                     {
-                        if(hascup) multiplier = configData.multipliers["wood"];
+                        if (hascup) multiplier = configData.multipliers["wood"];
                         type = "wood";
                     }
                     break;
                 case BuildingGrade.Enum.Stone:
-                    if(isHighWall)
+                    if (isHighWall)
                     {
-                        if(hascup) multiplier = configData.multipliers["highStoneWall"];
+                        if (hascup) multiplier = configData.multipliers["highStoneWall"];
                         type = "high stone wall";
                     }
-                    else if(isHighGate)
+                    else if (isHighGate)
                     {
-                        if(hascup) multiplier = configData.multipliers["highStoneWall"];
+                        if (hascup) multiplier = configData.multipliers["highStoneWall"];
                         type = "high stone gate";
                     }
                     else
                     {
-                        if(hascup) multiplier = configData.multipliers["stone"];
+                        if (hascup) multiplier = configData.multipliers["stone"];
                         type = "stone";
                     }
                     break;
                 case BuildingGrade.Enum.Metal:
-                    if(hascup) multiplier = configData.multipliers["sheet"];
+                    if (hascup) multiplier = configData.multipliers["sheet"];
                     type = "sheet";
                     break;
                 case BuildingGrade.Enum.TopTier:
-                    if(hascup) multiplier = configData.multipliers["armored"];
+                    if (hascup) multiplier = configData.multipliers["armored"];
                     type = "armored";
                     break;
                 default:
@@ -480,10 +480,10 @@ namespace Oxide.Plugins
 
             OutputRcon($"CheckCupboardBlock:   Checking for cupboard connected to {grade} {ename}.");
 
-            if(building != null)
+            if (building != null)
             {
                 // cupboard overlap.  Block safe from decay.
-                if(building.GetDominatingBuildingPrivilege() == null)
+                if (building.GetDominatingBuildingPrivilege() == null)
                 {
                     OutputRcon($"CheckCupboardBlock:     Block NOT owned by cupboard!");
                     return false;
@@ -502,29 +502,49 @@ namespace Oxide.Plugins
         // Non-block entity check
         bool CheckCupboardEntity(BaseEntity entity, bool mundane = false)
         {
-            int targetLayer = LayerMask.GetMask("Construction", "Construction Trigger", "Trigger", "Deployed");
-            List<BuildingPrivlidge> cups = new List<BuildingPrivlidge>();
-            Vis.Entities(entity.transform.position, configData.Global.cupboardRange, cups, targetLayer);
-
-            OutputRcon($"CheckCupboardEntity:   Checking for cupboard within {configData.Global.cupboardRange.ToString()}m of {entity.ShortPrefabName}.", mundane);
-
-            if(cups.Count > 0)
+            if (configData.Global.useCupboardRange)
             {
-                // cupboard overlap.  Entity safe from decay.
-                OutputRcon($"CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
-                return true;
-            }
+                // This is the old way using cupboard distance instead of BP.  It's less efficient but some may have made use of this range concept, so here it is.
+                int targetLayer = LayerMask.GetMask("Construction", "Construction Trigger", "Trigger", "Deployed");
+                List<BuildingPrivlidge> cups = new List<BuildingPrivlidge>();
+                Vis.Entities(entity.transform.position, configData.Global.cupboardRange, cups, targetLayer);
 
-            OutputRcon($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
-            return false;
+                OutputRcon($"CheckCupboardEntity:   Checking for cupboard within {configData.Global.cupboardRange.ToString()}m of {entity.ShortPrefabName}.", mundane);
+
+                if (cups.Count > 0)
+                {
+                    // cupboard overlap.  Entity safe from decay.
+                    OutputRcon($"CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
+                    return true;
+                }
+
+                OutputRcon($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
+                return false;
+            }
+            else
+            {
+                // New method of simply checking for the entity's building privilege.
+                OutputRcon($"CheckCupboardEntity:   Checking for building privilege for {entity.ShortPrefabName}.", mundane);
+                BuildingPrivlidge tc = entity.GetBuildingPrivilege();
+
+                if (tc != null)
+                {
+                    // cupboard overlap.  Entity safe from decay.
+                    OutputRcon($"CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
+                    return true;
+                }
+
+                OutputRcon($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
+                return false;
+            }
         }
 
         // Prevent players from adding building resources to cupboard if so configured
         private object CanMoveItem(Item item, PlayerInventory inventory, uint targetContainer, int targetSlot)
         {
-            if(item == null) return null;
-            if(targetContainer == 0) return null;
-            if(targetSlot == 0) return null;
+            if (item == null) return null;
+            if (targetContainer == 0) return null;
+            if (targetSlot == 0) return null;
             ItemContainer container = inventory.FindContainer(targetContainer);
 
             if (!(configData.Global.blockCupboardResources || configData.Global.blockCupboardWood)) return null;
@@ -565,14 +585,14 @@ namespace Oxide.Plugins
         void CmdInfo(BasePlayer player, string command, string[] args)
         {
             if (!permission.UserHasPermission(player.UserIDString, "nodecay.admin")) return;
-            if(args.Length > 0)
+            if (args.Length > 0)
             {
-                if(args[0] == "enable")
+                if (args[0] == "enable")
                 {
                     enabled = !enabled;
                     SendReply(player, $"NoDecay enabled set to {enabled.ToString()}");
                 }
-                else if(args[0] == "log")
+                else if (args[0] == "log")
                 {
                     configData.Debug.outputToRcon = !configData.Debug.outputToRcon;
                     SendReply(player, $"Debug logging set to {configData.Debug.outputToRcon.ToString()}");
@@ -581,7 +601,7 @@ namespace Oxide.Plugins
                 {
                     UpdateEnts();
                 }
-                else if(args[0] == "info")
+                else if (args[0] == "info")
                 {
                     string info = "NoDecay current settings:\n  Multipliers:";
                     info += "\n\tarmored: " + configData.multipliers["armored"];ToString();
@@ -648,9 +668,9 @@ namespace Oxide.Plugins
             sb.Append("  · ").AppendLine($"twig={configData.multipliers["twig"]} - campfire={configData.multipliers["campfire"]}");
             sb.Append("  · ").Append($"wood ={ configData.multipliers["wood"]} - stone ={ configData.multipliers["stone"]} - sheet ={ configData.multipliers["sheet"]} - armored ={ configData.multipliers["armored"]}\n");
 
-            if(configData.Global.requireCupboard == true)
+            if (configData.Global.requireCupboard == true)
             {
-                if(configData.Global.cupboardCheckEntity == true)
+                if (configData.Global.cupboardCheckEntity == true)
                 {
                     string range = configData.Global.cupboardRange.ToString();
                     sb.Append("  · ").Append($"cupboard check ={ true } - entity range ={ range }");
@@ -670,10 +690,10 @@ namespace Oxide.Plugins
         // Just here to cleanup the code a bit
         private void OutputRcon(string message, bool mundane = false)
         {
-            if(configData.Debug.outputToRcon)
+            if (configData.Debug.outputToRcon)
             {
-                if(!mundane) Puts($"{message}");
-                else if(mundane && configData.Debug.outputMundane) Puts($"{message}");
+                if (!mundane) Puts($"{message}");
+                else if (mundane && configData.Debug.outputMundane) Puts($"{message}");
             }
         }
         #endregion
@@ -684,7 +704,6 @@ namespace Oxide.Plugins
             public Debug Debug = new Debug();
             public Global Global = new Global();
             public SortedDictionary<string, float> multipliers;
-//            public Multipliers Mutipliers = new Multipliers(); // Temporary from old configs
             public Multipliers Multipliers = new Multipliers();
             public VersionNumber Version;
         }
@@ -702,6 +721,7 @@ namespace Oxide.Plugins
             public bool cupboardCheckEntity = false;
             public float protectedDays = 0;
             public float cupboardRange = 30f;
+            public bool useCupboardRange = false;
             public bool DestroyOnZero = true;
             public bool useJPipes = false;
             public bool blockCupboardResources = false;
