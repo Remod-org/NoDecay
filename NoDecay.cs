@@ -27,7 +27,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.66", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.67", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -120,7 +120,7 @@ namespace Oxide.Plugins
 
             float damageAmount = 0f;
             DateTime tick = DateTime.Now;
-            string entity_name = entity.LookupPrefab().name;
+            string entity_name = entity.LookupPrefab().name.ToLower();
             //Puts($"Decay Entity: {entity_name}");
             string owner = entity.OwnerID.ToString();
             bool mundane = false;
