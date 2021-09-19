@@ -712,7 +712,7 @@ namespace Oxide.Plugins
                     Message(iplayer, "ndstatus", enabled.ToString());
                     if (disabled.Contains(id))
                     {
-                        Message(iplayer, "ndison");
+                        Message(iplayer, "ndisoff");
                     }
                     else
                     {
