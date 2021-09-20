@@ -121,36 +121,42 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
    The warning from Rust about Building Decaying cannot be bypassed at this time except by stocking a TC with the appropriate materials.  If a player adds materials to his TC, NoDecay will be bypassed altogether for their building, and normal upkeep costs will apply.  There are server variables available to adjust cost and decay rates, but that is outside of the scope of what NoDecay is intended to do and may also affect its operation.
 
 ### Permissions
-    - nodecay.use   -- Required for NoDecay to work for a user, if the usePermission flag is set to true.
-    - nodecay.admin -- Required to use the /nodecay commands below
+
+	- nodecay.use   -- Required for NoDecay to work for a user, if the usePermission flag is set to true.
+	- nodecay.admin -- Required to use the /nodecay commands below
 
 ### Commands
 These commands work for any user regardless of permission:
 
-    - `nodecay ?` -- For users to show current global as well as personal status for enable/disable of NoDecay
-	- `nodecay off` -- For users to set their status as disabled.  In this case, decay will be standard for this user's owned items
-	- `nodecay on` -- For users to set their status as enabled.  In this case, decay will be managed by NoDecay for this user's owned items
+	- `nodecay ?` -- For users to show current global as well as personal status for
+		enable/disable of NoDecay
+	- `nodecay off` -- For users to set their status as disabled.  In this case, decay
+		will be standard for this user's owned items
+	- `nodecay on` -- For users to set their status as enabled.  In this case, decay
+		will be managed by NoDecay for this user's owned items
 
 These commands only work for users with the nodecay.admin permission:
 
-    - `nodecay log` -- Toggle logging of debug info to oxide log and rcon
-    - `nodecay info` -- Display current configuration (must still set manually in config and reload)
+	- `nodecay log` -- Toggle logging of debug info to oxide log and rcon
+	- `nodecay info` -- Display current configuration
+		(must still set manually in config and reload)
 	- `nodecay enable` -- Toggle global enable status
-	- `nodecay update` -- Update the list of entities.  This is normally run in the background at each wipe for newly-introduced items.
+	- `nodecay update` -- Update the list of entities.  This is normally run in the
+		background at each wipe for newly-introduced items.
 
 ### Developers
 A couple of hooks have been implemented:
 
-    - private bool NoDecayGet(ulong playerid=0)
-	    - Returns global enabled status if playerid == 0
-        - Returns player status if playerid > 0
+	- private bool NoDecayGet(ulong playerid=0)
+		- Returns global enabled status if playerid == 0
+		- Returns player status if playerid > 0
 
-    - private object NoDecaySet(ulong playerid=0, bool status=true)
-	    - Sets global status if playerid == 0
-        - Sets player status if playerid > 0
+	- private object NoDecaySet(ulong playerid=0, bool status=true)
+		- Sets global status if playerid == 0
+		- Sets player status if playerid > 0
 
 ### Credits
-    - **Deicide666ra** and **Piarb**, the original authors of this plugin
-    - **Diesel**, for helping maintain the plugin
+	- **Deicide666ra** and **Piarb**, the original authors of this plugin
+	- **Diesel**, for helping maintain the plugin
 
 Thanks to Deicide666ra, the original author of this plugin, for his permission to continue his work.
