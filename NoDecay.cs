@@ -19,15 +19,17 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endregion License
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using Oxide.Core;
 using Oxide.Core.Libraries.Covalence;
 using Oxide.Core.Plugins;
+using Oxide.Game.Rust.Cui;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.68", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.69", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -40,6 +42,10 @@ namespace Oxide.Plugins
         private Dictionary<string, long> lastConnected = new Dictionary<string, long>();
         private List<ulong> disabled = new List<ulong>();
         private Dictionary<string, List<string>> entityinfo = new Dictionary<string, List<string>>();
+
+        private const string permNoDecayUse = "nodecay.use";
+        private const string permNoDecayAdmin = "nodecay.admin";
+        const string TCOVR = "nodecay.overlay";
 
         [PluginReference]
         private readonly Plugin JPipes;
@@ -59,6 +65,7 @@ namespace Oxide.Plugins
                 ["nddebug"] = "Debug logging set to {0}",
                 ["perm"] = "You have permission to use NoDecay.",
                 ["noperm"] = "You DO NOT have permission to use NoDecay.",
+                ["protby"] = "Protected by NoDecay",
                 ["ndsettings"] = "NoDecay current settings:\n  Multipliers:"
             }, this);
         }
@@ -67,10 +74,78 @@ namespace Oxide.Plugins
         void Init()
         {
             AddCovalenceCommand("nodecay", "CmdInfo");
-            permission.RegisterPermission("nodecay.use", this);
-            permission.RegisterPermission("nodecay.admin", this);
+            permission.RegisterPermission(permNoDecayUse, this);
+            permission.RegisterPermission(permNoDecayAdmin, this);
             LoadData();
             if (entityinfo.Count == 0) UpdateEnts();
+        }
+
+        private void Unload()
+        {
+            foreach (BasePlayer player in BasePlayer.activePlayerList)
+            {
+                CuiHelper.DestroyUi(player, TCOVR);
+            }
+        }
+
+        void OnServerInitialized()
+        {
+            // Workaround for no decay on horses, even if set to decay here
+            if (configData.multipliers["horse"] > 0)
+            {
+                float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
+
+                foreach (RidableHorse horse in Resources.FindObjectsOfTypeAll<RidableHorse>())
+                {
+                    if (horse.net == null) continue;
+                    if (horse.IsHitched() || horse.IsDestroyed) continue;
+
+                    if (newdecaytime > 0)
+                    {
+                        OutputRcon($"Adding {Math.Floor(newdecaytime).ToString()} minutes of decay time to horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes");
+                        horse.AddDecayDelay(newdecaytime);
+                    }
+                    else
+                    {
+                        OutputRcon($"Subtracting {Math.Abs(Math.Floor(newdecaytime)).ToString()} minutes of decay time from horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes");
+                        //horse.nextDecayTime = Time.time + newdecaytime;
+                        horse.AddDecayDelay(newdecaytime);
+                    }
+
+                    horse.SetDecayActive(true);
+                }
+            }
+        }
+
+        private object CanLootEntity(BasePlayer player, StorageContainer container)
+        {
+            if (!configData.Global.disableWarning) return null;
+            if (!player.IPlayer.HasPermission(permNoDecayUse) && configData.Global.usePermission) return null;
+            if (container == null) return null;
+            var privs = container.GetComponentInParent<BuildingPrivlidge>() ?? null;
+            if (privs == null) return null;
+
+            TcOverlay(player, privs);
+            return null;
+        }
+        private void OnLootEntityEnd(BasePlayer player, BaseCombatEntity entity)
+        {
+            if (!configData.Global.disableWarning) return;
+            if (!player.IPlayer.HasPermission(permNoDecayUse) && configData.Global.usePermission) return;
+            if (entity == null) return;
+            var privs = entity.GetComponentInParent<BuildingPrivlidge>() ?? null;
+            if (privs == null) return;
+
+            CuiHelper.DestroyUi(player, TCOVR);
+        }
+        private void TcOverlay(BasePlayer player, BaseEntity entity)
+        {
+            CuiHelper.DestroyUi(player, TCOVR);
+
+            CuiElementContainer container = UI.Container(TCOVR, UI.Color("3E3C37", 1f), "0.651 0.5", "0.946 0.532", true, "Overlay");
+            UI.Label(ref container, TCOVR, UI.Color("#cacaca", 1f), Lang("protby"), 14, "0 0", "1 1");
+
+            CuiHelper.AddUi(player, container);
         }
 
         void Loaded() => LoadConfigValues();
@@ -82,7 +157,7 @@ namespace Oxide.Plugins
                 if (configData.Global.usePermission)
                 {
                     string owner = buildingPrivilege.OwnerID.ToString();
-                    if (permission.UserHasPermission(owner, "nodecay.use") || owner == "0")
+                    if (permission.UserHasPermission(owner, permNoDecayUse) || owner == "0")
                     {
                         if (owner != "0")
                         {
@@ -151,7 +226,7 @@ namespace Oxide.Plugins
 
             if (configData.Global.usePermission)
             {
-                if (permission.UserHasPermission(owner, "nodecay.use") || owner == "0")
+                if (permission.UserHasPermission(owner, permNoDecayUse) || owner == "0")
                 {
                     if (owner != "0")
                     {
@@ -252,7 +327,7 @@ namespace Oxide.Plugins
 
                 NextTick(() =>
                 {
-                    OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
+                    OutputRcon($"Decay ({entity_name} - {entity.net.ID.ToString()}) before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
                     entity.health -= damageAmount;
                     if (entity.health == 0 && configData.Global.DestroyOnZero)
                     {
@@ -267,6 +342,30 @@ namespace Oxide.Plugins
             {
                 double ms = (DateTime.Now - tick).TotalMilliseconds;
                 if (ms > configData.Global.warningTime || configData.Debug.outputMundane) Puts($"NoDecay.OnEntityTakeDamage on {entity_name} took {ms} ms to execute.");
+            }
+        }
+
+        // Workaround for no decay on horses, even if set to decay here
+        void OnEntitySpawned(RidableHorse horse)
+        {
+            if (horse == null) return;
+            if (horse.net == null) return;
+
+            if (configData.multipliers["horse"] > 0)
+            {
+                float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
+                if (newdecaytime > 0)
+                {
+                    OutputRcon($"Adding {Math.Floor(newdecaytime).ToString()} minutes of decay time to horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes");
+                    horse.AddDecayDelay(newdecaytime);
+                }
+                else
+                {
+                    OutputRcon($"Subtracting {Math.Abs(Math.Floor(newdecaytime)).ToString()} minutes of decay time from horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes");
+                    horse.AddDecayDelay(newdecaytime);
+                }
+                horse.SetDecayActive(true);
+                return;
             }
         }
 
@@ -438,7 +537,6 @@ namespace Oxide.Plugins
             // If not, multiplier will be standard of 1.0f (hascup true).
             if (configData.Global.requireCupboard == true)
             {
-
                 OutputRcon($"NoDecay checking for local cupboard.");
                 hascup = CheckCupboardBlock(block, entity.LookupPrefab().name, block.grade.ToString().ToLower());
             }
@@ -618,7 +716,7 @@ namespace Oxide.Plugins
         [Command("nodecay")]
         void CmdInfo(IPlayer iplayer, string command, string[] args)
         {
-            if (permission.UserHasPermission(iplayer.Id, "nodecay.admin"))
+            if (permission.UserHasPermission(iplayer.Id, permNoDecayAdmin))
             {
                 if (args.Length > 0)
                 {
@@ -699,7 +797,7 @@ namespace Oxide.Plugins
                             disabled.Add(id);
                         }
                         Message(iplayer, "ndstatus", enabled.ToString());
-                        if (permission.UserHasPermission(iplayer.Id, "nodecay.use"))
+                        if (permission.UserHasPermission(iplayer.Id, permNoDecayUse))
                         {
                             Message(iplayer, "perm");
                         }
@@ -716,7 +814,7 @@ namespace Oxide.Plugins
                             disabled.Remove(id);
                         }
                         Message(iplayer, "ndstatus", enabled.ToString());
-                        if (permission.UserHasPermission(iplayer.Id, "nodecay.use"))
+                        if (permission.UserHasPermission(iplayer.Id, permNoDecayUse))
                         {
                             Message(iplayer, "perm");
                         }
@@ -728,7 +826,7 @@ namespace Oxide.Plugins
                         break;
                     case "?":
                         Message(iplayer, "ndstatus", enabled.ToString());
-                        if (permission.UserHasPermission(iplayer.Id, "nodecay.use"))
+                        if (permission.UserHasPermission(iplayer.Id, permNoDecayUse))
                         {
                             Message(iplayer, "perm");
                         }
@@ -1000,6 +1098,115 @@ namespace Oxide.Plugins
         private void SaveConfig(ConfigData config)
         {
             Config.WriteObject(config, true);
+        }
+        #endregion
+
+        #region UI 
+        public static class UI
+        {
+            public static CuiElementContainer Container(string panel, string color, string min, string max, bool useCursor = false, string parent = "Overlay")
+            {
+                CuiElementContainer container = new CuiElementContainer()
+                {
+                    {
+                        new CuiPanel
+                        {
+                            Image = { Color = color },
+                            RectTransform = {AnchorMin = min, AnchorMax = max},
+                            CursorEnabled = useCursor
+                        },
+                        new CuiElement().Parent = parent,
+                        panel
+                    }
+                };
+                return container;
+            }
+            public static void Panel(ref CuiElementContainer container, string panel, string color, string min, string max, bool cursor = false)
+            {
+                container.Add(new CuiPanel
+                {
+                    Image = { Color = color },
+                    RectTransform = { AnchorMin = min, AnchorMax = max },
+                    CursorEnabled = cursor
+                },
+                panel);
+            }
+            public static void Label(ref CuiElementContainer container, string panel, string color, string text, int size, string min, string max, TextAnchor align = TextAnchor.MiddleCenter)
+            {
+                container.Add(new CuiLabel
+                {
+                    Text = { Color = color, FontSize = size, Align = align, Text = text },
+                    RectTransform = { AnchorMin = min, AnchorMax = max }
+                },
+                panel);
+
+            }
+            public static void Button(ref CuiElementContainer container, string panel, string color, string text, int size, string min, string max, string command, TextAnchor align = TextAnchor.MiddleCenter, string tcolor="FFFFFF")
+            {
+                container.Add(new CuiButton
+                {
+                    Button = { Color = color, Command = command, FadeIn = 0f },
+                    RectTransform = { AnchorMin = min, AnchorMax = max },
+                    Text = { Text = text, FontSize = size, Align = align, Color = Color(tcolor, 1f) }
+                },
+                panel);
+            }
+            public static void Input(ref CuiElementContainer container, string panel, string color, string text, int size, string command, string min, string max)
+            {
+                container.Add(new CuiElement
+                {
+                    Name = CuiHelper.GetGuid(),
+                    Parent = panel,
+                    Components =
+                    {
+                        new CuiInputFieldComponent
+                        {
+                            Align = TextAnchor.MiddleLeft,
+                            CharsLimit = 30,
+                            Color = color,
+                            Command = command + text,
+                            FontSize = size,
+                            IsPassword = false,
+                            Text = text
+                        },
+                        new CuiRectTransformComponent { AnchorMin = min, AnchorMax = max },
+                        new CuiNeedsCursorComponent()
+                    }
+                });
+            }
+            public static void Icon(ref CuiElementContainer container, string panel, string color, string imageurl, string min, string max)
+            {
+                container.Add(new CuiElement
+                {
+                    Name = CuiHelper.GetGuid(),
+                    Parent = panel,
+                    Components =
+                    {
+                        new CuiRawImageComponent
+                        {
+                            Url = imageurl,
+                            Sprite = "assets/content/textures/generic/fulltransparent.tga",
+                            Color = color
+                        },
+                        new CuiRectTransformComponent
+                        {
+                            AnchorMin = min,
+                            AnchorMax = max
+                        }
+                    }
+                });
+            }
+            public static string Color(string hexColor, float alpha)
+            {
+                if (hexColor.StartsWith("#"))
+                {
+                    hexColor = hexColor.Substring(1);
+                }
+                int red = int.Parse(hexColor.Substring(0, 2), NumberStyles.AllowHexSpecifier);
+                int green = int.Parse(hexColor.Substring(2, 2), NumberStyles.AllowHexSpecifier);
+                int blue = int.Parse(hexColor.Substring(4, 2), NumberStyles.AllowHexSpecifier);
+                return $"{(double)red / 255} {(double)green / 255} {(double)blue / 255} {alpha}";
+            }
         }
         #endregion
     }
