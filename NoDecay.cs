@@ -29,7 +29,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.72", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.73", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -120,7 +120,7 @@ namespace Oxide.Plugins
         private object CanLootEntity(BasePlayer player, StorageContainer container)
         {
             if (!configData.Global.disableLootWarning) return null;
-            if (!player.IPlayer.HasPermission(permNoDecayUse) && configData.Global.usePermission) return null;
+            if (!permission.UserHasPermission(player.UserIDString, permNoDecayUse) && configData.Global.usePermission) return null;
             if (container == null) return null;
             var privs = container.GetComponentInParent<BuildingPrivlidge>();
             if (privs == null) return null;
@@ -132,7 +132,7 @@ namespace Oxide.Plugins
         private void OnLootEntityEnd(BasePlayer player, BaseCombatEntity entity)
         {
             if (!configData.Global.disableLootWarning) return;
-            if (!player.IPlayer.HasPermission(permNoDecayUse) && configData.Global.usePermission) return;
+            if (!permission.UserHasPermission(player.UserIDString, permNoDecayUse) && configData.Global.usePermission) return;
             if (entity == null) return;
             if (entity.GetComponentInParent<BuildingPrivlidge>() == null) return;
 
@@ -426,6 +426,7 @@ namespace Oxide.Plugins
             entityinfo["trap"] = new List<string>();
             entityinfo["vehicle"] = new List<string>();
             entityinfo["watchtower"] = new List<string>();
+            entityinfo["water"] = new List<string>();
             entityinfo["stonewall"] = new List<string>();
             entityinfo["woodwall"] = new List<string>();
             entityinfo["mining"] = new List<string>();
@@ -457,9 +458,8 @@ namespace Oxide.Plugins
                          entity_name.Contains("grill") || entity_name.Contains("speaker") ||
                          entity_name.Contains("strobe") || entity_name.Contains("strobe") ||
                          entity_name.Contains("fog") || entity_name.Contains("shopfront") ||
-                         entity_name.Contains("wall.window.bars") ||
+                         entity_name.Contains("wall.window.bars") || entity_name.Contains("graveyard") ||
                          entity_name.Contains("candle") || entity_name.Contains("hatchet") ||
-                         entity_name.Contains("graveyard") || entity_name.Contains("water") ||
                          entity_name.Contains("jackolantern") || entity_name.Contains("composter") ||
                          entity_name.Contains("workbench"))
                 {
@@ -488,6 +488,10 @@ namespace Oxide.Plugins
                 else if (entity_name.Contains("watchtower"))
                 {
                     entityinfo["watchtower"].Add(entity_name);
+                }
+                else if (entity_name.Contains("water_catcher") || entity_name.Equals("waterbarrel"))
+                {
+                    entityinfo["water"].Add(entity_name);
                 }
                 else if (entity_name.Contains("beartrap") || entity_name.Contains("landmine") || entity_name.Contains("spikes.floor"))
                 {
@@ -775,6 +779,7 @@ namespace Oxide.Plugins
                         info += "\n\ttwig: " + configData.multipliers["twig"]; ToString();
                         info += "\n\tvehicle: " + configData.multipliers["vehicle"]; ToString();
                         info += "\n\twatchtower: " + configData.multipliers["watchtower"]; ToString();
+                        info += "\n\twater: " + configData.multipliers["water"]; ToString();
                         info += "\n\twood: " + configData.multipliers["wood"]; ToString();
 
                         info += "\n\n\tEnabled: " + enabled.ToString();
@@ -1048,6 +1053,7 @@ namespace Oxide.Plugins
             public float trapMultiplier;
             public float vehicleMultiplier;
             public float watchtowerMultiplier;
+            public float waterMultiplier;
         }
 
         protected override void LoadDefaultConfig()
@@ -1091,6 +1097,7 @@ namespace Oxide.Plugins
                     { "trap", 0f },
                     { "vehicle", 0f },
                     { "watchtower", 0f },
+                    { "water", 0f },
                     { "wood", 0f },
                     { "deployables", 0.1f } // For all others not listed
                 },
@@ -1130,9 +1137,15 @@ namespace Oxide.Plugins
                     { "trap", configData.Multipliers.trapMultiplier },
                     { "vehicle", configData.Multipliers.vehicleMultiplier },
                     { "watchtower", configData.Multipliers.watchtowerMultiplier },
+                    { "water", configData.Multipliers.waterMultiplier },
                     { "deployables", configData.Multipliers.deployablesMultiplier } // For all others not listed
                 };
                 configData.Multipliers = null;
+            }
+
+            if (configData.Version < new VersionNumber(1, 0, 73))
+            {
+                configData.multipliers.Add("water", 0f);
             }
             configData.Version = Version;
 
