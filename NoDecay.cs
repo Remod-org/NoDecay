@@ -20,6 +20,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using Oxide.Core;
 using Oxide.Core.Libraries.Covalence;
@@ -29,7 +30,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.73", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.74", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -102,12 +103,12 @@ namespace Oxide.Plugins
 
                     if (newdecaytime > 0)
                     {
-                        OutputRcon($"Adding {Math.Floor(newdecaytime).ToString()} minutes of decay time to horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
+                        DoLog($"Adding {Math.Floor(newdecaytime).ToString()} minutes of decay time to horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
                         horse.AddDecayDelay(newdecaytime);
                     }
                     else
                     {
-                        OutputRcon($"Subtracting {Math.Abs(Math.Floor(newdecaytime)).ToString()} minutes of decay time from horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
+                        DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime)).ToString()} minutes of decay time from horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
                         //horse.nextDecayTime = Time.time + newdecaytime;
                         horse.AddDecayDelay(newdecaytime);
                     }
@@ -162,7 +163,7 @@ namespace Oxide.Plugins
                     {
                         if (owner != "0")
                         {
-                            OutputRcon($"TC owner {owner} has NoDecay permission!");
+                            DoLog($"TC owner {owner} has NoDecay permission!");
                         }
                     }
                     else
@@ -172,7 +173,7 @@ namespace Oxide.Plugins
                 }
                 if (disabled.Contains(buildingPrivilege.OwnerID))
                 {
-                    OutputRcon($"TC owner {buildingPrivilege.OwnerID.ToString()} has disabled NoDecay.");
+                    DoLog($"TC owner {buildingPrivilege.OwnerID.ToString()} has disabled NoDecay.");
                     return;
                 }
 
@@ -233,17 +234,17 @@ namespace Oxide.Plugins
                 {
                     if (owner != "0")
                     {
-                        OutputRcon($"{entity_name} owner {owner} has NoDecay permission!");
+                        DoLog($"{entity_name} owner {owner} has NoDecay permission!");
                     }
                 }
                 else
                 {
-                    OutputRcon($"{entity_name} owner {owner} does NOT have NoDecay permission.  Standard decay in effect.");
+                    DoLog($"{entity_name} owner {owner} does NOT have NoDecay permission.  Standard decay in effect.");
                     return null;
                 }
                 if (disabled.Contains(entity.OwnerID))
                 {
-                    OutputRcon($"Entity owner {entity.OwnerID.ToString()} has disabled NoDecay.");
+                    DoLog($"Entity owner {entity.OwnerID.ToString()} has disabled NoDecay.");
                     return null;
                 }
             }
@@ -257,12 +258,12 @@ namespace Oxide.Plugins
                     float days = Math.Abs((now - lc) / 86400);
                     if (days > configData.Global.protectedDays)
                     {
-                        OutputRcon($"Allowing decay for owner offline for {configData.Global.protectedDays.ToString()} days");
+                        DoLog($"Allowing decay for owner offline for {configData.Global.protectedDays.ToString()} days");
                         return null;
                     }
                     else
                     {
-                        OutputRcon($"Owner was last connected {days.ToString()} days ago and is still protected...");
+                        DoLog($"Owner was last connected {days.ToString()} days ago and is still protected...");
                     }
                 }
             }
@@ -275,7 +276,7 @@ namespace Oxide.Plugins
                 {
                     if (configData.Global.useJPipes && JPipes && (bool)JPipes?.Call("IsPipe", entity) && (bool)JPipes?.Call("IsNoDecayEnabled"))
                     {
-                        OutputRcon("Found a JPipe with nodecay enabled");
+                        DoLog("Found a JPipe with nodecay enabled");
                         hitInfo.damageTypes.Scale(Rust.DamageType.Decay, 0f);
                         return null;
                     }
@@ -294,21 +295,17 @@ namespace Oxide.Plugins
                 else
                 {
                     // Main check for non-building entities/deployables
-                    foreach (KeyValuePair<string, List<string>> entities in entityinfo)
+                    foreach (KeyValuePair<string, List<string>> entity_type in entityinfo.Where(x => x.Value.Contains(entity_name)))
                     {
-                        //private Dictionary<string, List<string>> entityinfo = new Dictionary<string, List<string>>();
-                        if (entities.Value.Contains(entity_name))
+                        if (entity_type.Key.Equals("vehicle") || entity_type.Key.Equals("boat") || entity_type.Key.Equals("balloon") || entity_type.Key.Equals("horse"))
                         {
-                            if (entities.Key.Equals("vehicle") || entities.Key.Equals("boat") || entities.Key.Equals("balloon") || entities.Key.Equals("horse"))
-                            {
-                                mundane = true;
-                            }
-                            OutputRcon($"Found {entity_name} listed in {entities.Key}", mundane);
-                            if (configData.multipliers.ContainsKey(entities.Key))
-                            {
-                                damageAmount = before * configData.multipliers[entities.Key];
-                                break;
-                            }
+                            mundane = true;
+                        }
+                        DoLog($"Found {entity_name} listed in {entity_type.Key}", mundane);
+                        if (configData.multipliers.ContainsKey(entity_type.Key))
+                        {
+                            damageAmount = before * configData.multipliers[entity_type.Key];
+                            break;
                         }
                     }
                 }
@@ -318,7 +315,7 @@ namespace Oxide.Plugins
                 {
                     // Verify that we should check for a cupboard and ensure that one exists.
                     // If so, multiplier will be set to entityCupboardMultiplier.
-                    OutputRcon("NoDecay checking for local cupboard.", mundane);
+                    DoLog("NoDecay checking for local cupboard.", mundane);
 
                     if (CheckCupboardEntity(entity, mundane))
                     {
@@ -342,15 +339,15 @@ namespace Oxide.Plugins
 
                 NextTick(() =>
                 {
-                    OutputRcon($"Decay [{entity_name}{pos} - {entity.net.ID.ToString()}] before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
+                    DoLog($"Decay [{entity_name}{pos} - {entity.net.ID.ToString()}] before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
                     if (inzone)
                     {
-                        OutputRcon($"Decay [{entity_name}] FOUND overlapping ZoneManager zone(s): {zones}", mundane);
+                        DoLog($"Decay [{entity_name}] FOUND overlapping ZoneManager zone(s): {zones}", mundane);
                     }
                     entity.health -= damageAmount;
                     if (entity.health == 0 && configData.Global.DestroyOnZero)
                     {
-                        OutputRcon($"Entity {entity_name}{pos} completely decayed - destroying!", mundane);
+                        DoLog($"Entity {entity_name}{pos} completely decayed - destroying!", mundane);
                         if (entity == null) return;
                         entity.Kill(BaseNetworkable.DestroyMode.Gib);
                     }
@@ -375,12 +372,12 @@ namespace Oxide.Plugins
                 float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
                 if (newdecaytime > 0)
                 {
-                    OutputRcon($"Adding {Math.Floor(newdecaytime).ToString()} minutes of decay time to horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
+                    DoLog($"Adding {Math.Floor(newdecaytime).ToString()} minutes of decay time to horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
                     horse.AddDecayDelay(newdecaytime);
                 }
                 else
                 {
-                    OutputRcon($"Subtracting {Math.Abs(Math.Floor(newdecaytime)).ToString()} minutes of decay time from horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
+                    DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime)).ToString()} minutes of decay time from horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
                     horse.AddDecayDelay(newdecaytime);
                 }
                 horse.SetDecayActive(true);
@@ -390,14 +387,14 @@ namespace Oxide.Plugins
         // Workaround for car chassis that won't die
         private void OnEntityDeath(ModularCar car, HitInfo hitinfo)
         {
-            OutputRcon("Car died!  Checking for associated parts...");
+            DoLog("Car died!  Checking for associated parts...");
             List<BaseEntity> ents = new List<BaseEntity>();
             Vis.Entities(car.transform.position, 1f, ents);
             foreach (BaseEntity ent in ents)
             {
                 if (ent.name.Contains("module_car_spawned") && !ent.IsDestroyed)
                 {
-                    OutputRcon($"Killing {ent.ShortPrefabName}");
+                    DoLog($"Killing {ent.ShortPrefabName}");
                     ent.Kill(BaseNetworkable.DestroyMode.Gib);
                 }
             }
@@ -439,7 +436,7 @@ namespace Oxide.Plugins
                 if (entity_name == null) continue;
                 if (names.Contains(entity_name)) continue; // Saves 20-30 seconds of processing time.
                 names.Add(entity_name);
-                //OutputRcon($"Checking {entity_name}");
+                //DoLog($"Checking {entity_name}");
 
                 if (entity_name.Contains("campfire") || entity_name.Contains("skull_fire_pit"))
                 {
@@ -534,6 +531,7 @@ namespace Oxide.Plugins
                         entity_name.Contains("1module_") ||
                         entity_name.Contains("2module_") ||
                         entity_name.Contains("3module_") ||
+                        entity_name.Contains("snowmobile") ||
                         entity_name.Contains("4module_"))
                 {
                     entityinfo["vehicle"].Add(entity_name);
@@ -553,18 +551,18 @@ namespace Oxide.Plugins
             string type = null;
             bool hascup = true; // Assume true (has cupboard or we don't require one)
 
-            OutputRcon($"NoDecay checking for block damage to {block.LookupPrefab().name}");
+            DoLog($"NoDecay checking for block damage to {block.LookupPrefab().name}");
 
             // Verify that we should check for a cupboard and ensure that one exists.
             // If not, multiplier will be standard of 1.0f (hascup true).
             if (configData.Global.requireCupboard)
             {
-                OutputRcon($"NoDecay checking for local cupboard.");
+                DoLog($"NoDecay checking for local cupboard.");
                 hascup = CheckCupboardBlock(block, entity.LookupPrefab().name, block.grade.ToString().ToLower());
             }
             else
             {
-                OutputRcon($"NoDecay not checking for local cupboard.");
+                DoLog($"NoDecay not checking for local cupboard.");
             }
 
             switch(block.grade)
@@ -616,14 +614,14 @@ namespace Oxide.Plugins
                     type = "armored";
                     break;
                 default:
-                    OutputRcon($"Decay ({type}) has unknown grade type.");
+                    DoLog($"Decay ({type}) has unknown grade type.");
                     type = "unknown";
                     break;
             }
 
             damageAmount = before * multiplier;
 
-            OutputRcon($"Decay ({type}) before: {before} after: {damageAmount}");
+            DoLog($"Decay ({type}) before: {before} after: {damageAmount}");
             return damageAmount;
         }
 
@@ -632,23 +630,23 @@ namespace Oxide.Plugins
         {
             BuildingManager.Building building = block.GetBuilding();
 
-            OutputRcon($"CheckCupboardBlock:   Checking for cupboard connected to {grade} {ename}.");
+            DoLog($"CheckCupboardBlock:   Checking for cupboard connected to {grade} {ename}.");
 
             if (building != null)
             {
                 // cupboard overlap.  Block safe from decay.
                 if (building.GetDominatingBuildingPrivilege() == null)
                 {
-                    OutputRcon($"CheckCupboardBlock:     Block NOT owned by cupboard!");
+                    DoLog($"CheckCupboardBlock:     Block NOT owned by cupboard!");
                     return false;
                 }
 
-                OutputRcon($"CheckCupboardBlock:     Block owned by cupboard!");
+                DoLog($"CheckCupboardBlock:     Block owned by cupboard!");
                 return true;
             }
             else
             {
-                OutputRcon($"CheckCupboardBlock:     Unable to find cupboard.");
+                DoLog($"CheckCupboardBlock:     Unable to find cupboard.");
             }
             return false;
         }
@@ -663,32 +661,32 @@ namespace Oxide.Plugins
                 List<BuildingPrivlidge> cups = new List<BuildingPrivlidge>();
                 Vis.Entities(entity.transform.position, configData.Global.cupboardRange, cups, targetLayer);
 
-                OutputRcon($"CheckCupboardEntity:   Checking for cupboard within {configData.Global.cupboardRange.ToString()}m of {entity.ShortPrefabName}.", mundane);
+                DoLog($"CheckCupboardEntity:   Checking for cupboard within {configData.Global.cupboardRange.ToString()}m of {entity.ShortPrefabName}.", mundane);
 
                 if (cups.Count > 0)
                 {
                     // cupboard overlap.  Entity safe from decay.
-                    OutputRcon($"CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
+                    DoLog($"CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
                     return true;
                 }
 
-                OutputRcon($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
+                DoLog($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
                 return false;
             }
             else
             {
                 // New method of simply checking for the entity's building privilege.
-                OutputRcon($"CheckCupboardEntity:   Checking for building privilege for {entity.ShortPrefabName}.", mundane);
+                DoLog($"CheckCupboardEntity:   Checking for building privilege for {entity.ShortPrefabName}.", mundane);
                 BuildingPrivlidge tc = entity.GetBuildingPrivilege();
 
                 if (tc != null)
                 {
                     // cupboard overlap.  Entity safe from decay.
-                    OutputRcon($"CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
+                    DoLog($"CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
                     return true;
                 }
 
-                OutputRcon($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
+                DoLog($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
                 return false;
             }
         }
@@ -712,12 +710,12 @@ namespace Oxide.Plugins
                 string res = item?.info?.shortname;
                 if (res.Contains("wood") && configData.Global.blockCupboardWood)
                 {
-                    OutputRcon($"Player tried to add {res} to a cupboard!");
+                    DoLog($"Player tried to add {res} to a cupboard!");
                     return false;
                 }
                 else if ((res.Contains("stones") || res.Contains("metal.frag") || res.Contains("metal.refined")) && configData.Global.blockCupboardResources)
                 {
-                    OutputRcon($"Player tried to add {res} to a cupboard!");
+                    DoLog($"Player tried to add {res} to a cupboard!");
                     return false;
                 }
                 else if (
@@ -725,7 +723,7 @@ namespace Oxide.Plugins
                     || (res.Contains("metal.frag") && configData.Global.blockCupboardMetal)
                     || (res.Contains("metal.refined") && configData.Global.blockCupboardArmor))
                 {
-                    OutputRcon($"Player tried to add {res} to a cupboard!");
+                    DoLog($"Player tried to add {res} to a cupboard!");
                     return false;
                 }
             }
@@ -977,7 +975,7 @@ namespace Oxide.Plugins
         }
 
         // Just here to cleanup the code a bit
-        private void OutputRcon(string message, bool mundane = false)
+        private void DoLog(string message, bool mundane = false)
         {
             if (configData.Debug.outputToRcon)
             {
