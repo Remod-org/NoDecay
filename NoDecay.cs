@@ -30,7 +30,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.74", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.75", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -697,37 +697,33 @@ namespace Oxide.Plugins
             if (item == null) return null;
             if (targetContainer == 0) return null;
             if (targetSlot == 0) return null;
-            ItemContainer container = inventory.FindContainer(targetContainer);
+            ItemContainer container = inventory?.FindContainer(targetContainer);
 
             if (!(configData.Global.blockCupboardResources || configData.Global.blockCupboardWood)) return null;
-            if (!(configData.Global.blockCupboardStone || configData.Global.blockCupboardMetal || configData.Global.blockCupboardArmor)) return null;
 
-            try
+            BaseEntity cup = container?.entityOwner;
+            if (cup == null) return null;
+            if (!cup.name.Contains("cupboard.tool")) return null;
+
+            string res = item?.info?.shortname;
+            DoLog($"Player trying to add {res} to a cupboard!");
+            if (res.Equals("wood") && configData.Global.blockCupboardWood)
             {
-                BaseEntity cup = container.entityOwner as BaseEntity;
-                if (!cup.name.Contains("cupboard.tool")) return null;
-
-                string res = item?.info?.shortname;
-                if (res.Contains("wood") && configData.Global.blockCupboardWood)
+                DoLog($"Player blocked from adding {res} to a cupboard!");
+                return false;
+            }
+            else if (configData.Global.blockCupboardResources)
+            {
+                if (
+                    (res.Equals("stones") && configData.Global.blockCupboardStone)
+                    || (res.Equals("metal.fragments") && configData.Global.blockCupboardMetal)
+                    || (res.Equals("metal.refined") && configData.Global.blockCupboardArmor))
                 {
-                    DoLog($"Player tried to add {res} to a cupboard!");
-                    return false;
-                }
-                else if ((res.Contains("stones") || res.Contains("metal.frag") || res.Contains("metal.refined")) && configData.Global.blockCupboardResources)
-                {
-                    DoLog($"Player tried to add {res} to a cupboard!");
-                    return false;
-                }
-                else if (
-                    (res.Contains("stones") && configData.Global.blockCupboardStone)
-                    || (res.Contains("metal.frag") && configData.Global.blockCupboardMetal)
-                    || (res.Contains("metal.refined") && configData.Global.blockCupboardArmor))
-                {
-                    DoLog($"Player tried to add {res} to a cupboard!");
+                    DoLog($"Player blocked from adding {res} to a cupboard!");
                     return false;
                 }
             }
-            catch { }
+
             return null;
         }
         #endregion
