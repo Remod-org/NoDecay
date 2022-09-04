@@ -30,7 +30,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.75", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.76", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -326,15 +326,28 @@ namespace Oxide.Plugins
                 string pos = "";
                 string zones = "";
                 bool inzone = false;
+
+                string[] zonedata = GetEntityZones(entity);
+                if (zonedata.Length > 0)
+                {
+                    inzone = true;
+                    if (ZoneManager && configData.Global.honorZoneManagerFlag)
+                    {
+                        foreach (string zoneId in zonedata)
+                        {
+                            if ((bool)ZoneManager?.Call("HasFlag", zoneId, "nodecay"))
+                            {
+                                DoLog($"{entity_name} in zone {zoneId}, which has the nodecay flag.  Setting damage to 0.");
+                                damageAmount = 0f;
+                            }
+                        }
+                    }
+                }
+
                 if (configData.Debug.logPosition)
                 {
                     pos = $" at {PositionToGrid(entity.transform.position)} {entity.transform.position.ToString()}";
-                    string[] zonedata = GetEntityZones(entity);
-                    if (zonedata.Length > 0)
-                    {
-                        inzone = true;
-                        zones = string.Join(",", zonedata);
-                    }
+                    zones = string.Join(",", zonedata);
                 }
 
                 NextTick(() =>
@@ -342,8 +355,9 @@ namespace Oxide.Plugins
                     DoLog($"Decay [{entity_name}{pos} - {entity.net.ID.ToString()}] before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
                     if (inzone)
                     {
-                        DoLog($"Decay [{entity_name}] FOUND overlapping ZoneManager zone(s): {zones}", mundane);
+                        DoLog($"Decay [{entity_name}] in ZoneManager zone(s): {zones}", mundane);
                     }
+
                     entity.health -= damageAmount;
                     if (entity.health == 0 && configData.Global.DestroyOnZero)
                     {
@@ -557,12 +571,12 @@ namespace Oxide.Plugins
             // If not, multiplier will be standard of 1.0f (hascup true).
             if (configData.Global.requireCupboard)
             {
-                DoLog($"NoDecay checking for local cupboard.");
+                DoLog("NoDecay checking for local cupboard.");
                 hascup = CheckCupboardBlock(block, entity.LookupPrefab().name, block.grade.ToString().ToLower());
             }
             else
             {
-                DoLog($"NoDecay not checking for local cupboard.");
+                DoLog("NoDecay not checking for local cupboard.");
             }
 
             switch(block.grade)
@@ -637,16 +651,16 @@ namespace Oxide.Plugins
                 // cupboard overlap.  Block safe from decay.
                 if (building.GetDominatingBuildingPrivilege() == null)
                 {
-                    DoLog($"CheckCupboardBlock:     Block NOT owned by cupboard!");
+                    DoLog("CheckCupboardBlock:     Block NOT owned by cupboard!");
                     return false;
                 }
 
-                DoLog($"CheckCupboardBlock:     Block owned by cupboard!");
+                DoLog("CheckCupboardBlock:     Block owned by cupboard!");
                 return true;
             }
             else
             {
-                DoLog($"CheckCupboardBlock:     Unable to find cupboard.");
+                DoLog("CheckCupboardBlock:     Unable to find cupboard.");
             }
             return false;
         }
@@ -666,29 +680,27 @@ namespace Oxide.Plugins
                 if (cups.Count > 0)
                 {
                     // cupboard overlap.  Entity safe from decay.
-                    DoLog($"CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
+                    DoLog("CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
                     return true;
                 }
 
-                DoLog($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
+                DoLog("CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
                 return false;
             }
-            else
+
+            // New method of simply checking for the entity's building privilege.
+            DoLog($"CheckCupboardEntity:   Checking for building privilege for {entity.ShortPrefabName}.", mundane);
+            BuildingPrivlidge tc = entity.GetBuildingPrivilege();
+
+            if (tc != null)
             {
-                // New method of simply checking for the entity's building privilege.
-                DoLog($"CheckCupboardEntity:   Checking for building privilege for {entity.ShortPrefabName}.", mundane);
-                BuildingPrivlidge tc = entity.GetBuildingPrivilege();
-
-                if (tc != null)
-                {
-                    // cupboard overlap.  Entity safe from decay.
-                    DoLog($"CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
-                    return true;
-                }
-
-                DoLog($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
-                return false;
+                // cupboard overlap.  Entity safe from decay.
+                DoLog("CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
+                return true;
             }
+
+            DoLog("CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
+            return false;
         }
 
         // Prevent players from adding building resources to cupboard if so configured
@@ -1008,6 +1020,7 @@ namespace Oxide.Plugins
             public bool useCupboardRange;
             public bool DestroyOnZero;
             public bool useJPipes;
+            public bool honorZoneManagerFlag;
             public bool blockCupboardResources;
             public bool blockCupboardWood;
             public bool blockCupboardStone;
@@ -1140,6 +1153,10 @@ namespace Oxide.Plugins
             if (configData.Version < new VersionNumber(1, 0, 73))
             {
                 configData.multipliers.Add("water", 0f);
+            }
+            if (configData.Version < new VersionNumber(1, 0, 76))
+            {
+                configData.Global.honorZoneManagerFlag = false;
             }
             configData.Version = Version;
 
