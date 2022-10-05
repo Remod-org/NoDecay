@@ -1,22 +1,23 @@
-#region License
+#region License (GPL v2)
 /*
-Copyright RFC1920 <desolationoutpostpve@gmail.com>
+    NoDecay - Scales or disables decay of items for Rust by Facepunch
+    Copyright (c) 2022 RFC1920 <desolationoutpostpve@gmail.com>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
-files (the "Software"), to use the software subject to the following restrictions:
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License v2.0.
 
-This copyright and permission notice shall be included in all copies or substantial portions of the Software.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-The software must remain unmodified from the version(s) released by the author.
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-The software may not be redistributed or sold partially or in total without approval from the author.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
-IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    Optionally you can also view the license at <http://www.gnu.org/licenses/>.
 */
-#endregion License
+#endregion License (GPL v2)
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -30,7 +31,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.77", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.78", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -925,6 +926,19 @@ namespace Oxide.Plugins
 
             return null;
         }
+
+        private void DisableMe()
+        {
+            if (!configData.Global.respondToActivationHooks) return;
+            enabled = false;
+            Puts($"{Name} disabled");
+        }
+        private void EnableMe()
+        {
+            if (!configData.Global.respondToActivationHooks) return;
+            enabled = true;
+            Puts($"{Name} enabled");
+        }
         #endregion
 
         #region helpers
@@ -1040,6 +1054,7 @@ namespace Oxide.Plugins
             public float protectedDisplayTime;
             public double warningTime;
             public List<string> overrideZoneManager = new List<string>();
+            public bool respondToActivationHooks;
         }
 
         private class Multipliers
@@ -1087,7 +1102,8 @@ namespace Oxide.Plugins
                     protectVehicleOnLift = true,
                     protectedDisplayTime = 4400,
                     warningTime = 10,
-                    overrideZoneManager = new List<string>() { "vehicle", "balloon" }
+                    overrideZoneManager = new List<string>() { "vehicle", "balloon" },
+                    respondToActivationHooks = false
                 },
                 multipliers = new SortedDictionary<string, float>()
                 {
