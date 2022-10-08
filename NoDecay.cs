@@ -31,7 +31,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.78", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.79", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -713,25 +713,21 @@ namespace Oxide.Plugins
         }
 
         // Prevent players from adding building resources to cupboard if so configured
-        private object CanMoveItem(Item item, PlayerInventory inventory, uint targetContainer, int targetSlot)
+        //private object CanMoveItem(Item item, PlayerInventory inventory, uint targetContainer, int targetSlot)
+        private ItemContainer.CanAcceptResult? CanAcceptItem(ItemContainer container, Item item, int targetPos)
         {
-            if (item == null) return null;
-            if (targetContainer == 0) return null;
-            if (targetSlot == 0) return null;
-            ItemContainer container = inventory?.FindContainer(targetContainer);
-
-            if (!(configData.Global.blockCupboardResources || configData.Global.blockCupboardWood)) return null;
-
             BaseEntity cup = container?.entityOwner;
             if (cup == null) return null;
-            if (!cup.name.Contains("cupboard.tool")) return null;
+            if (!(cup is BuildingPrivlidge)) return null;
+
+            if (!(configData.Global.blockCupboardResources || configData.Global.blockCupboardWood)) return null;
 
             string res = item?.info?.shortname;
             DoLog($"Player trying to add {res} to a cupboard!");
             if (res.Equals("wood") && configData.Global.blockCupboardWood)
             {
                 DoLog($"Player blocked from adding {res} to a cupboard!");
-                return false;
+                return ItemContainer.CanAcceptResult.CannotAcceptRightNow;
             }
             else if (configData.Global.blockCupboardResources)
             {
@@ -741,7 +737,7 @@ namespace Oxide.Plugins
                     || (res.Equals("metal.refined") && configData.Global.blockCupboardArmor))
                 {
                     DoLog($"Player blocked from adding {res} to a cupboard!");
-                    return false;
+                    return ItemContainer.CanAcceptResult.CannotAcceptRightNow;
                 }
             }
 
