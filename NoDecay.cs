@@ -31,7 +31,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.79", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.80", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -45,6 +45,7 @@ namespace Oxide.Plugins
         private List<ulong> disabled = new List<ulong>();
         private Dictionary<string, List<string>> entityinfo = new Dictionary<string, List<string>>();
 
+        private int targetLayer = LayerMask.GetMask("Construction", "Construction Trigger", "Trigger", "Deployed");
         private const string permNoDecayUse = "nodecay.use";
         private const string permNoDecayAdmin = "nodecay.admin";
         private const string TCOVR = "nodecay.overlay";
@@ -648,17 +649,52 @@ namespace Oxide.Plugins
             return damageAmount;
         }
 
+        public BuildingPrivlidge GetBuildingPrivilege(BuildingManager.Building building, BuildingBlock block = null)
+        {
+            BuildingPrivlidge buildingPrivlidge = null;
+            if (building.HasBuildingPrivileges())
+            {
+                for (int i = 0; i < building.buildingPrivileges.Count; i++)
+                {
+                    BuildingPrivlidge item = building.buildingPrivileges[i];
+                    if (!(item == null) && item.IsOlderThan(buildingPrivlidge))
+                    {
+                        DoLog("CheckCupboardBlock:     Found block connected to cupboard!");
+                        buildingPrivlidge = item;
+                    }
+                }
+            }
+            else if (configData.Global.cupboardRange > 0)
+            {
+                // Disconnected building with no TC, but possibly in cupboard range
+                List<BuildingPrivlidge> cups = new List<BuildingPrivlidge>();
+                Vis.Entities(block.transform.position, configData.Global.cupboardRange, cups, targetLayer);
+                foreach (BuildingPrivlidge cup in cups)
+                {
+                    foreach (ProtoBuf.PlayerNameID p in cup.authorizedPlayers.ToArray())
+                    {
+                        if (p.userid == block.OwnerID)
+                        {
+                            DoLog("CheckCupboardBlock:     Found block in range of cupboard!");
+                            return cup;
+                        }
+                    }
+                }
+            }
+            return buildingPrivlidge;
+        }
+
         // Check that a building block is owned by/attached to a cupboard
         private bool CheckCupboardBlock(BuildingBlock block, string ename = "unknown", string grade = "")
         {
             BuildingManager.Building building = block.GetBuilding();
-
             DoLog($"CheckCupboardBlock:   Checking for cupboard connected to {grade} {ename}.");
 
             if (building != null)
             {
                 // cupboard overlap.  Block safe from decay.
-                if (building.GetDominatingBuildingPrivilege() == null)
+                //if (building.GetDominatingBuildingPrivilege() == null)
+                if (GetBuildingPrivilege(building, block) == null)
                 {
                     DoLog("CheckCupboardBlock:     Block NOT owned by cupboard!");
                     return false;
@@ -670,8 +706,8 @@ namespace Oxide.Plugins
             else
             {
                 DoLog("CheckCupboardBlock:     Unable to find cupboard.");
+                return false;
             }
-            return false;
         }
 
         // Non-block entity check
@@ -680,11 +716,10 @@ namespace Oxide.Plugins
             if (configData.Global.useCupboardRange)
             {
                 // This is the old way using cupboard distance instead of BP.  It's less efficient but some may have made use of this range concept, so here it is.
-                int targetLayer = LayerMask.GetMask("Construction", "Construction Trigger", "Trigger", "Deployed");
                 List<BuildingPrivlidge> cups = new List<BuildingPrivlidge>();
                 Vis.Entities(entity.transform.position, configData.Global.cupboardRange, cups, targetLayer);
 
-                DoLog($"CheckCupboardEntity:   Checking for cupboard within {configData.Global.cupboardRange.ToString()}m of {entity.ShortPrefabName}.", mundane);
+                DoLog($"CheckCupboardEntity:   Checking for cupboard within {configData.Global.cupboardRange}m of {entity.ShortPrefabName}.", mundane);
 
                 if (cups.Count > 0)
                 {

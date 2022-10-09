@@ -100,6 +100,8 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
  Set cupboardCheckEntity to also check for entities in range of cupboards (i.e. not just foundations, etc.  This should work on doors and high walls, etc.
 
  Set cupboardRange to a desired value for the cupboardCheckEntity range.  If too high, may affect other user's stuff.  If set too low it may not protect external items if out of range.
+  - NOTE: as of 1.0.80 this will always be used to check for buildings without a TC but in range of a cupboard.  In that case, the block owner will be checked to verify that the owner is listed in the authorizedPlayers list on the TC.
+
  Use "entityCupboardMultiplier" to set the amount of decay for entities in cupboard range.
 
  Set useCupboardRange to false to ignore the range setting above and simply use the building privilege for the entity.  This is likely more efficient and is the default as of 1.0.65.
