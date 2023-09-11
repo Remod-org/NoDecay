@@ -31,7 +31,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.82", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.83", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -441,6 +441,7 @@ namespace Oxide.Plugins
             entityinfo["furnace"] = new List<string>();
             entityinfo["horse"] = new List<string>();
             entityinfo["minicopter"] = new List<string>();
+            entityinfo["attackcopter"] = new List<string>();
             entityinfo["sam"] = new List<string>();
             entityinfo["scrapcopter"] = new List<string>();
             entityinfo["sedan"] = new List<string>();
@@ -541,6 +542,10 @@ namespace Oxide.Plugins
                 else if (entity_name.Contains("minicopter"))
                 {
                     entityinfo["minicopter"].Add(entity_name);
+                }
+                else if (entity_name.Contains("attackcopter"))
+                {
+                    entityinfo["attackcopter"].Add(entity_name);
                 }
                 else if (entity_name.Contains("horse"))
                 {
@@ -801,31 +806,32 @@ namespace Oxide.Plugins
                         return;
                     case "info":
                         string info = Lang("ndsettings");
-                        info += "\n\tarmored: " + configData.multipliers["armored"]; ToString();
-                        info += "\n\tballoon: " + configData.multipliers["balloon"]; ToString();
-                        info += "\n\tbarricade: " + configData.multipliers["barricade"]; ToString();
-                        info += "\n\tbbq: " + configData.multipliers["bbq"]; ToString();
-                        info += "\n\tboat: " + configData.multipliers["boat"]; ToString();
-                        info += "\n\tbox: " + configData.multipliers["box"]; ToString();
-                        info += "\n\tcampfire" + configData.multipliers["campfire"]; ToString();
-                        info += "\n\tdeployables: " + configData.multipliers["deployables"]; ToString();
-                        info += "\n\tentityCupboard: " + configData.multipliers["entityCupboard"]; ToString();
-                        info += "\n\tfurnace: " + configData.multipliers["furnace"]; ToString();
-                        info += "\n\thighWoodWall: " + configData.multipliers["highWoodWall"]; ToString();
-                        info += "\n\thighStoneWall: " + configData.multipliers["highStoneWall"]; ToString();
-                        info += "\n\thorse: " + configData.multipliers["horse"]; ToString();
-                        info += "\n\tminicopter: " + configData.multipliers["minicopter"]; ToString();
-                        info += "\n\tsam: " + configData.multipliers["sam"]; ToString();
-                        info += "\n\tscrapcopter: " + configData.multipliers["scrapcopter"]; ToString();
-                        info += "\n\tsedan: " + configData.multipliers["sedan"]; ToString();
-                        info += "\n\tsheet: " + configData.multipliers["sheet"]; ToString();
-                        info += "\n\tstone: " + configData.multipliers["stone"]; ToString();
-                        info += "\n\ttrap: " + configData.multipliers["trap"]; ToString();
-                        info += "\n\ttwig: " + configData.multipliers["twig"]; ToString();
-                        info += "\n\tvehicle: " + configData.multipliers["vehicle"]; ToString();
-                        info += "\n\twatchtower: " + configData.multipliers["watchtower"]; ToString();
-                        info += "\n\twater: " + configData.multipliers["water"]; ToString();
-                        info += "\n\twood: " + configData.multipliers["wood"]; ToString();
+                        info += "\n\tarmored: " + configData.multipliers["armored"].ToString();
+                        info += "\n\tballoon: " + configData.multipliers["balloon"].ToString();
+                        info += "\n\tbarricade: " + configData.multipliers["barricade"].ToString();
+                        info += "\n\tbbq: " + configData.multipliers["bbq"].ToString();
+                        info += "\n\tboat: " + configData.multipliers["boat"].ToString();
+                        info += "\n\tbox: " + configData.multipliers["box"].ToString();
+                        info += "\n\tcampfire" + configData.multipliers["campfire"].ToString();
+                        info += "\n\tdeployables: " + configData.multipliers["deployables"].ToString();
+                        info += "\n\tentityCupboard: " + configData.multipliers["entityCupboard"].ToString();
+                        info += "\n\tfurnace: " + configData.multipliers["furnace"].ToString();
+                        info += "\n\thighWoodWall: " + configData.multipliers["highWoodWall"].ToString();
+                        info += "\n\thighStoneWall: " + configData.multipliers["highStoneWall"].ToString();
+                        info += "\n\thorse: " + configData.multipliers["horse"].ToString();
+                        info += "\n\tminicopter: " + configData.multipliers["minicopter"].ToString();
+                        info += "\n\tattackcopter: " + configData.multipliers["attackcopter"].ToString();
+                        info += "\n\tscrapcopter: " + configData.multipliers["scrapcopter"].ToString();
+                        info += "\n\tsam: " + configData.multipliers["sam"].ToString();
+                        info += "\n\tsedan: " + configData.multipliers["sedan"].ToString();
+                        info += "\n\tsheet: " + configData.multipliers["sheet"].ToString();
+                        info += "\n\tstone: " + configData.multipliers["stone"].ToString();
+                        info += "\n\ttrap: " + configData.multipliers["trap"].ToString();
+                        info += "\n\ttwig: " + configData.multipliers["twig"].ToString();
+                        info += "\n\tvehicle: " + configData.multipliers["vehicle"].ToString();
+                        info += "\n\twatchtower: " + configData.multipliers["watchtower"].ToString();
+                        info += "\n\twater: " + configData.multipliers["water"].ToString();
+                        info += "\n\twood: " + configData.multipliers["wood"].ToString();
 
                         info += "\n\n\tEnabled: " + enabled.ToString();
                         info += "\n\tdisableWarning: " + configData.Global.disableWarning.ToString();
@@ -1108,8 +1114,9 @@ namespace Oxide.Plugins
             public float highStoneWallMultiplier;
             public float horseMultiplier;
             public float minicopterMultiplier;
-            public float samMultiplier;
+            public float attackcopterMultiplier;
             public float scrapcopterMultiplier;
+            public float samMultiplier;
             public float sedanMultiplier;
             public float trapMultiplier;
             public float vehicleMultiplier;
@@ -1150,6 +1157,7 @@ namespace Oxide.Plugins
                     { "highStoneWall", 0f },
                     { "horse", 0f },
                     { "minicopter", 0f },
+                    { "attackcopter", 0f },
                     { "mining", 0f },
                     { "sam", 0f },
                     { "scrapcopter", 0f },
@@ -1194,6 +1202,7 @@ namespace Oxide.Plugins
                     { "highStoneWall", configData.Multipliers.highStoneWallMultiplier },
                     { "horse", configData.Multipliers.horseMultiplier },
                     { "minicopter", configData.Multipliers.minicopterMultiplier },
+                    { "attackcopter", configData.Multipliers.attackcopterMultiplier },
                     { "sam", configData.Multipliers.samMultiplier },
                     { "scrapcopter", configData.Multipliers.scrapcopterMultiplier },
                     { "sedan", configData.Multipliers.sedanMultiplier },
