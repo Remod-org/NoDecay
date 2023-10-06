@@ -31,7 +31,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.84", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.85", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -145,7 +145,7 @@ namespace Oxide.Plugins
         {
             CuiHelper.DestroyUi(player, TCOVR);
 
-            CuiElementContainer container = UI.Container(TCOVR, UI.Color("3E3C37", 1f), "0.651 0.5", "0.946 0.535", true, "Overlay");
+            CuiElementContainer container = UI.Container(TCOVR, UI.Color("3E3C37", 1f), "0.651 0.604", "0.946 0.636", true, "Overlay");
             UI.Label(ref container, TCOVR, UI.Color("#cacaca", 1f), Lang("protby"), 14, "0 0", "1 1");
 
             CuiHelper.AddUi(player, container);
