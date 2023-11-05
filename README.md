@@ -14,7 +14,6 @@ The default configuration does **NOT** affect *Twig decay* but nullifies all dam
  Note, the default is cupboardCheckEntity: false, which will skip checking for cupboards in range of entities. It will still check for blocks attached to cupboards, which should be more accurate.
 
 ### Configuration
-NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46.  Older configs should be upgraded automatically.
 
 ```json
 {
@@ -123,7 +122,7 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
 
      "(17:04:31) | [NoDecay] NoDecay.OnEntityTakeDamage on Rowboat took 15.04 ms to execute."
 
-#### A Few Notes About Multipliers, decay.tick, etc.
+#### A Few Notes About multipliers, decay.tick, etc.
    For any config file multiplier, you can set to 0 to disable decay for that item, 1 for normal decay, or a higher number for faster decay.  In other words, anything below 1 is slower down to 0 which is no decay.  Anything above 1 increases the rate of decay for that item and, yes, you can set numbers higher than 1.
 
    Decay is implemented by Rust based on the decay.tick value which defaults to 300 (5 minutes).  This specifies how often decay is processed on your server.
