@@ -31,7 +31,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.86", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.87", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -436,6 +436,7 @@ namespace Oxide.Plugins
             entityinfo["bbq"] = new List<string>();
             entityinfo["boat"] = new List<string>();
             entityinfo["box"] = new List<string>();
+            entityinfo["building"] = new List<string>();
             entityinfo["campfire"] = new List<string>();
             entityinfo["deployables"] = new List<string>();
             entityinfo["furnace"] = new List<string>();
@@ -471,19 +472,21 @@ namespace Oxide.Plugins
                 {
                     entityinfo["box"].Add(entity_name);
                 }
-                else if (entity_name.Contains("deployed") || entity_name.Contains("shutter") ||
+                else if (entity_name.Contains("shutter") ||
                          (entity_name.Contains("door") && !entity_name.Contains("doorway")) ||
-                         entity_name.Contains("reinforced") || entity_name.Contains("shopfront") ||
-                         entity_name.Contains("bars") || entity_name.Contains("netting") ||
                          entity_name.Contains("hatch") || entity_name.Contains("garagedoor") ||
+                         entity_name.Contains("bars") || entity_name.Contains("netting") ||
                          entity_name.Contains("cell") || entity_name.Contains("fence") ||
-                         entity_name.Contains("grill") || entity_name.Contains("speaker") ||
-                         entity_name.Contains("strobe") || entity_name.Contains("strobe") ||
-                         entity_name.Contains("fog") || entity_name.Contains("shopfront") ||
-                         entity_name.Contains("wall.window.bars") || entity_name.Contains("graveyard") ||
-                         entity_name.Contains("candle") || entity_name.Contains("hatchet") ||
-                         entity_name.Contains("jackolantern") || entity_name.Contains("composter") ||
-                         entity_name.Contains("workbench"))
+                         entity_name.Contains("reinforced") || entity_name.Contains("composter") ||
+                         entity_name.Contains("workbench") || entity_name.Contains("shopfront") ||
+                         entity_name.Contains("grill") || entity_name.Contains("wall.window.bars"))
+                {
+                    entityinfo["building"].Add(entity_name);
+                }
+                else if (entity_name.Contains("deployed") || entity_name.Contains("speaker") ||
+                         entity_name.Contains("strobe") || entity_name.Contains("fog") ||
+                         entity_name.Contains("graveyard") || entity_name.Contains("candle") ||
+                         entity_name.Contains("hatchet") || entity_name.Contains("jackolantern"))
                 {
                     entityinfo["deployables"].Add(entity_name);
                 }
@@ -1117,6 +1120,7 @@ namespace Oxide.Plugins
                     { "barricade", 0f },
                     { "bbq", 0f },
                     { "boat", 0f },
+                    { "building", 0f },
                     { "box", 0f },
                     { "campfire", 0f },
                     { "entityCupboard", 0f },
@@ -1168,6 +1172,10 @@ namespace Oxide.Plugins
             if (!configData.multipliers.ContainsKey("attackcopter"))
             {
                 configData.multipliers.Add("attackcopter", 0);
+            }
+            if (configData.Version < new VersionNumber(1, 0, 87))
+            {
+                configData.multipliers.Add("building", 0);
             }
             configData.Version = Version;
 
