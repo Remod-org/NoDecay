@@ -31,7 +31,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.87", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.88", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -546,7 +546,7 @@ namespace Oxide.Plugins
                 {
                     entityinfo["minicopter"].Add(entity_name);
                 }
-                else if (entity_name.Contains("attackcopter"))
+                else if (entity_name.Contains("attackhelicopter"))
                 {
                     entityinfo["attackcopter"].Add(entity_name);
                 }
