@@ -18,6 +18,7 @@
     Optionally you can also view the license at <http://www.gnu.org/licenses/>.
 */
 #endregion License (GPL v2)
+using HarmonyLib;
 using Oxide.Core;
 using Oxide.Core.Libraries.Covalence;
 using Oxide.Core.Plugins;
@@ -31,7 +32,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.90", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.91", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -73,6 +74,22 @@ namespace Oxide.Plugins
             }, this);
         }
         #endregion
+
+        [AutoPatch]
+        [HarmonyPatch(typeof(BuildingBlock), "DamageWallpaper", new Type[] { typeof(float), typeof(int) })]
+        public static class PaperPatch
+        {
+            [HarmonyPrefix]
+            private static bool Prefix(BuildingBlock __instance, float totalDamage, int side)
+            {
+                if (side == 0)
+                {
+                    Interface.Call("NoDecayLogHook", $"Disabling wallpaper decay for {__instance.net.ID.Value}:{__instance?.OwnerID}");
+                    return false;
+                }
+                return true;
+            }
+        }
 
         private void Init()
         {
@@ -357,7 +374,7 @@ namespace Oxide.Plugins
                     ModularCarGarage garage = entity.GetComponentInParent<ModularCarGarage>();
                     if (garage != null && configData.Global.protectVehicleOnLift)
                     {
-                        return null;
+                        return true;
                     }
                 }
                 else
@@ -547,8 +564,7 @@ namespace Oxide.Plugins
                          entity_name.Contains("cell") || entity_name.Contains("fence") ||
                          entity_name.Contains("reinforced") || entity_name.Contains("composter") ||
                          entity_name.Contains("workbench") || entity_name.Contains("shopfront") ||
-                         entity_name.Contains("grill") || entity_name.Contains("wall.window.bars") ||
-                         entity_name.Contains("wallpaper"))
+                         entity_name.Contains("grill") || entity_name.Contains("wall.window.bars"))
                 {
                     entityinfo["building"].Add(entity_name);
                 }
@@ -1113,7 +1129,12 @@ namespace Oxide.Plugins
             player.ChatMessage(sb.ToString());
         }
 
-        private void DoLog(string message, bool mundane = false)
+        private void NoDecayLogHook(string message)
+        {
+            DoLog(message);
+        }
+
+        public void DoLog(string message, bool mundane = false)
         {
             if (configData.Debug.outputToRcon)
             {
