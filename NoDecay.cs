@@ -32,7 +32,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.91", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.92", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -84,8 +84,12 @@ namespace Oxide.Plugins
             {
                 if (side == 0)
                 {
-                    Interface.Call("NoDecayLogHook", $"Disabling wallpaper decay for {__instance.net.ID.Value}:{__instance?.OwnerID}");
-                    return false;
+                    bool enabled = (bool)Interface.Call("NoDecayGet", __instance?.OwnerID);
+                    if (enabled)
+                    {
+                        Interface.Call("NoDecayLogHook", $"Disabling wallpaper decay for {__instance.net.ID.Value}:{__instance?.OwnerID}");
+                        return false;
+                    }
                 }
                 return true;
             }
