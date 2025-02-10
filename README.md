@@ -1,4 +1,4 @@
-## NoDecay (official)
+## NoDecay for Rust (official)
 Scales or disables decay of items, and deployables 
 
 This is the official release of NoDecay.  Any other versions out there are forks or otherwise unrelated.
