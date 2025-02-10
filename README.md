@@ -35,6 +35,8 @@ NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46. 
     "useCupboardRange": false,
     "usePermission": false,
     "DestroyOnZero": true,
+    "useJPipes": true,
+    "honorZoneManagerFlag": false,
     "disableWarning": true,
     "protectedDays": 0.0,
     "protectVehicleOnLift": true,
@@ -70,7 +72,7 @@ NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46. 
   "Version": {
     "Major": 1,
     "Minor": 0,
-    "Patch": 71
+    "Patch": 76
   }
 }
 ```
@@ -101,12 +103,14 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
  Use "entityCupboardMultiplier" to set the amount of decay for entities in cupboard range.
 
  Set useCupboardRange to false to ignore the range setting above and simply use the building privilege for the entity.  This is likely more efficient and is the default as of 1.0.65.
- 
+
  Set DestroyOnZero to true to enable destroying entities when health is zero.
 
  Set disableWarning to true to disable the "Building Decaying" warning.  This will be set to a default of 4400 minutes (73 hours) based on the value of protectedDisplayTime.  73 hours is enough to hit the default value shown for more than 72 hours of protection without NoDecay.  A warning will still be shown when viewing the contents of the TC.  But, as always, the building is protected anyway since that's what NoDecay is for.  Players may need to periodically open their TC to disable the warning again every couple of days.
 
  Set useJPipes if you have JPipes installed to ensure no decay for JPipes if NoDecay is configured with zero Multiplier for the JPipe building grade.
+
+ Set honorZoneManagerFlag if you have ZoneManager installed and wish to honor the NoDecay flag on ZoneManager zones.  This should, at least for NoDecay, skip all decay within a matching zone with that flag set.
 
  Set protectVehicleOnLift true if you want to prevent decay for vehicles on a lift.  This should bypass the vehicleMultiplier.
 
