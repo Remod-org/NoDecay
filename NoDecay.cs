@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.43", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.44", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     [Description("Scales or disables decay of items")]
     class NoDecay : RustPlugin
@@ -275,6 +275,7 @@ namespace Oxide.Plugins
                         entity_name.Contains("Strobe") ||
                         entity_name.Contains("speaker") ||
                         entity_name.Contains("Fog") ||
+                        entity_name.Contains("composter") ||
                         entity_name.Contains("Graveyard"))
                 {
                     if(c_requireCupboard && c_CupboardEntity)
