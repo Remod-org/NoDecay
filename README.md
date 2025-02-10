@@ -7,7 +7,7 @@ This is the official release of NoDecay.  Any other versions out there are forks
 
 The default configuration does **NOT** affect *Twig decay* but nullifies all damage on all other items.
 
- **As for version 1.0.89** items can heal.  Thanks to jozzo402 on github for the suggestion.
+ **As of version 1.0.89** items can heal.  Thanks to jozzo402 on github for the suggestion.
 
  **As of version 1.0.68** users can enable or disable NoDecay for their owned entities
 
