@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.44", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.45", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     // Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -58,6 +58,7 @@ namespace Oxide.Plugins
         void Init()
         {
             permission.RegisterPermission("nodecay.use", this);
+            permission.RegisterPermission("nodecay.admin", this);
         }
 
         void LoadConfigValues()
@@ -89,27 +90,17 @@ namespace Oxide.Plugins
             c_outputToRcon  = Convert.ToBoolean(GetConfigValue("Debug", "outputToRcon", false));
             c_outputMundane = Convert.ToBoolean(GetConfigValue("Debug", "outputMundane", false));
             c_usePermission = Convert.ToBoolean(GetConfigValue("Global", "usePermission", false));
-            c_DestroyOnZero = Convert.ToBoolean(GetConfigValue("Global", "DestroyOnZero", false));
+            c_DestroyOnZero = Convert.ToBoolean(GetConfigValue("Global", "DestroyOnZero", true));
+            c_requireCupboard = Convert.ToBoolean(GetConfigValue("Global", "requireCupboard", false));
+            c_CupboardEntity = Convert.ToBoolean(GetConfigValue("Global", "cupboardCheckEntity", false));
+            c_cupboardRange = Convert.ToSingle(GetConfigValue("Global", "cupboardRange", 30.0));
             c_blockCupboardResources = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardResources", false));
             c_blockCupboardWood  = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardWood", false));
             c_blockCupboardStone = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardStone", false));
             c_blockCupboardMetal = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardMetal", false));
             c_blockCupboardArmor = Convert.ToBoolean(GetConfigValue("Global", "blockCupboardArmor", false));
 
-            try
-            {
-                c_requireCupboard = Convert.ToBoolean(GetConfigValue("Global", "requireCupboard", false));
-                c_CupboardEntity  = Convert.ToBoolean(GetConfigValue("Global", "cupboardCheckEntity", false));
-                c_cupboardRange   = Convert.ToSingle(GetConfigValue("Global", "cupboardRange", 30.0));
-            }
-            catch
-            {
-                c_requireCupboard = false;
-                c_CupboardEntity  = false;
-                c_cupboardRange   = 30f;
-            }
-
-            if(g_configChanged)
+            if (g_configChanged)
             {
                 Puts("Configuration file updated.");
                 SaveConfig();
@@ -133,6 +124,59 @@ namespace Oxide.Plugins
             data[setting] = value;
             g_configChanged = true;
             return value;
+        }
+
+        [ChatCommand("nodecay")]
+        void CmdInfo(BasePlayer player, string command, string[] args)
+        {
+            if (!permission.UserHasPermission(player.UserIDString, "nodecay.admin")) return;
+            if(args.Length > 0)
+            {
+                if(args[0] == "log")
+                {
+                    c_outputToRcon = !c_outputToRcon;
+                    SendReply(player, $"Debug logging set to {c_outputToRcon.ToString()}");
+                }
+                else if(args[0] == "info")
+                {
+                    string info = "NoDecay current settings";
+                    info += "\n\ttwigMultiplier: " + c_twigMultiplier.ToString();
+                    info += "\n\twoodMultiplier: " + c_woodMultiplier.ToString();
+                    info += "\n\tstoneMultiplier: " + c_stoneMultiplier.ToString();
+                    info += "\n\tsheetMultiplier: " + c_sheetMultiplier.ToString();
+                    info += "\n\tarmoredMultiplier: " + c_armoredMultiplier.ToString();
+                    info += "\n\tcampfireMultiplier " + c_campfireMultiplier.ToString();
+                    info += "\n\thighWoodWallMultiplier: " + c_highWoodWallMultiplier.ToString();
+                    info += "\n\thighStoneWallMultiplier: " + c_highStoneWallMultiplier.ToString();
+                    info += "\n\tbarricadeMultiplier: " + c_barricadeMultiplier.ToString();
+                    info += "\n\ttrapMultiplier: " + c_trapMultiplier.ToString();
+                    info += "\n\tdeployablesMultiplier: " + c_deployablesMultiplier.ToString();
+                    info += "\n\tboxMultiplier: " + c_boxMultiplier.ToString();
+                    info += "\n\tsedanMultiplier: " + c_sedanMultiplier.ToString();
+                    info += "\n\tsamMultiplier: " + c_samMultiplier.ToString();
+                    info += "\n\tbaloonMultiplier: " + c_baloonMultiplier.ToString();
+                    info += "\n\tfurnaceMultiplier: " + c_furnaceMultiplier.ToString();
+                    info += "\n\tbbqMultiplier: " + c_bbqMultiplier.ToString();
+                    info += "\n\tboatMultiplier: " + c_boatMultiplier.ToString();
+                    info += "\n\tminicopterMultiplier: " + c_minicopterMultiplier.ToString();
+                    info += "\n\tscrapcopterMultiplier: " + c_scrapcopterMultiplier.ToString();
+                    info += "\n\twatchtowerMultiplier: " + c_watchtowerMultiplier.ToString();
+                    info += "\n\thorseMultiplier: " + c_horseMultiplier.ToString();
+                    info += "\n\n\tusePermission: " + c_usePermission.ToString();
+                    info += "\n\tDestroyOnZero: " + c_DestroyOnZero.ToString();
+                    info += "\n\trequireCupboard: " + c_requireCupboard.ToString();
+                    info += "\n\tCupboardEntity: " + c_CupboardEntity.ToString();
+                    info += "\n\tcupboardRange: " + c_cupboardRange.ToString();
+                    info += "\n\tblockCupboardResources: " + c_blockCupboardResources.ToString();
+                    info += "\n\tblockCupboardWood: " + c_blockCupboardWood.ToString();
+                    info += "\n\tblockCupboardStone: " + c_blockCupboardStone.ToString();
+                    info += "\n\tblockCupboardMetal: " + c_blockCupboardMetal.ToString();
+                    info += "\n\tblockCupboardArmor: " + c_blockCupboardArmor.ToString();
+
+                    SendReply(player, info);
+                    info = null;
+                }
+            }
         }
 
         [HookMethod("SendHelpText")]
@@ -178,7 +222,7 @@ namespace Oxide.Plugins
             if(!(c_blockCupboardResources || c_blockCupboardWood)) return null;
             if(!(c_blockCupboardStone || c_blockCupboardMetal || c_blockCupboardArmor)) return null;
             if(item == null) return null;
-            if(targetContainer == null) return null;
+            if(targetContainer == 0) return null;
 
             ItemContainer container = inventory.FindContainer(targetContainer);
 
@@ -242,58 +286,57 @@ namespace Oxide.Plugins
 
             try
             {
-                var block = entity as BuildingBlock;
                 float before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
 
-                if(block != null)
+                if(entity is BuildingBlock)
                 {
-                    damageAmount = ProcessBuildingDamage(block, entity, before);
+                    damageAmount = ProcessBuildingDamage(entity, before);
                 }
                 else if(entity_name == "campfire" || entity_name == "skull_fire_pit")
                 {
                     damageAmount = before * c_campfireMultiplier;
                 }
                 else if(entity_name == "box.wooden.large" ||
-                        entity_name == "woodbox_deployed" ||
-                        entity_name == "CoffinStorage")
+                     entity_name == "woodbox_deployed" ||
+                     entity_name == "CoffinStorage")
                 {
                     damageAmount = before * c_boxMultiplier;
                 }
                 else if(entity_name.Contains("deployed") ||
-                        entity_name.Contains("reinforced") ||
-                        entity_name.Contains("shopfront") ||
-                        entity_name.Contains("bars") ||
-                        entity_name.Contains("shutter") ||
-                        entity_name.Contains("netting") ||
-                        (entity_name.Contains("door") && !entity_name.Contains("doorway")) ||
-                        entity_name.Contains("hatch") ||
-                        entity_name.Contains("garagedoor") ||
-                        entity_name.Contains("cell") ||
-                        entity_name.Contains("fence") ||
-                        entity_name.Contains("grill") ||
-                        entity_name.Contains("Candle") ||
-                        entity_name.Contains("candle") ||
-                        entity_name.Contains("Strobe") ||
-                        entity_name.Contains("speaker") ||
-                        entity_name.Contains("Fog") ||
-                        entity_name.Contains("composter") ||
-                        entity_name.Contains("Graveyard"))
+                     entity_name.Contains("reinforced") ||
+                     entity_name.Contains("shopfront") ||
+                     entity_name.Contains("bars") ||
+                     entity_name.Contains("shutter") ||
+                     entity_name.Contains("netting") ||
+                     (entity_name.Contains("door") && !entity_name.Contains("doorway")) ||
+                     entity_name.Contains("hatch") ||
+                     entity_name.Contains("garagedoor") ||
+                     entity_name.Contains("cell") ||
+                     entity_name.Contains("fence") ||
+                     entity_name.Contains("grill") ||
+                     entity_name.Contains("Candle") ||
+                     entity_name.Contains("candle") ||
+                     entity_name.Contains("Strobe") ||
+                     entity_name.Contains("speaker") ||
+                     entity_name.Contains("Fog") ||
+                     entity_name.Contains("composter") ||
+                     entity_name.Contains("Graveyard"))
                 {
-                    if(c_requireCupboard && c_CupboardEntity)
-                    {
-                        // Verify that we should check for a cupboard and ensure that one exists.
-                        // If not, multiplier will be standard of 1.0f.
-                        OutputRcon($"NoDecay checking for local cupboard.");
-
-                        if(CheckCupboardEntity(entity))
-                        {
-                            damageAmount = before * c_deployablesMultiplier;
-                        }
-                    }
-                    else
-                    {
-                        damageAmount = before * c_deployablesMultiplier;
-                    }
+                     if (c_requireCupboard && c_CupboardEntity)
+                     {
+                         // Verify that we should check for a cupboard and ensure that one exists.
+                         // If not, multiplier will be standard of 1.0f.
+                         OutputRcon($"NoDecay checking for local cupboard.");
+                         
+                         if (CheckCupboardEntity(entity))
+                         {
+                             damageAmount = before * c_deployablesMultiplier;
+                         }
+                     }
+                     else
+                     {
+                         damageAmount = before * c_deployablesMultiplier;
+                     }
 
                     OutputRcon($"Decay({entity_name}) before: {before} after: {damageAmount}");
                 }
@@ -323,10 +366,8 @@ namespace Oxide.Plugins
                     damageAmount = before * c_watchtowerMultiplier;
                 }
                 else if(entity_name == "WaterBarrel" ||
-                        entity_name == "jackolantern.angry" ||
-                        entity_name == "jackolantern.happy" ||
-                        entity_name == "water_catcher_small" ||
-                        entity_name == "water_catcher_large")
+                        entity_name.Contains("jackolantern") ||
+                        entity_name.Contains("water_catcher"))
                 {
                     damageAmount = before * c_deployablesMultiplier;
                 }
@@ -340,19 +381,11 @@ namespace Oxide.Plugins
                 {
                     damageAmount = before * c_barricadeMultiplier;
                 }
-                else if(entity_name == "gates.external.high.stone")
+                else if(entity_name == "gates.external.high.stone" || entity_name == "wall.external.high.stone")
                 {
                     damageAmount = before * c_highStoneWallMultiplier;
                 }
-                else if(entity_name == "gates.external.high.wood")
-                {
-                    damageAmount = before * c_highWoodWallMultiplier;
-                }
-                else if(entity_name == "wall.external.high.stone")
-                {
-                    damageAmount = before * c_highStoneWallMultiplier;
-                }
-                else if(entity_name == "wall.external.high.wood")
+                else if(entity_name == "gates.external.high.wood" || entity_name == "wall.external.high.wood")
                 {
                     damageAmount = before * c_highWoodWallMultiplier;
                 }
@@ -382,7 +415,7 @@ namespace Oxide.Plugins
                 }
                 else
                 {
-                    Puts($"Unsupported decaying entity detected: {entity_name} --- please notify author");
+                    Puts($"Unsupported decaying entity detected: {entity_name} --- please notify author.");
                     return null;
                 }
 
@@ -404,11 +437,11 @@ namespace Oxide.Plugins
                 double ms = (DateTime.Now - tick).TotalMilliseconds;
                 if(ms > 10 || c_outputMundane) Puts($"NoDecay.OnEntityTakeDamage on {entity_name} took {ms} ms to execute.");
             }
-            return null;
         }
 
-        private float ProcessBuildingDamage(BuildingBlock block, BaseEntity entity, float before)
+        private float ProcessBuildingDamage(BaseEntity entity, float before)
         {
+            var block = entity as BuildingBlock;
             float multiplier = 1.0f;
             float damageAmount = 1.0f;
             bool isHighWall = block.LookupPrefab().name.Contains("wall.external");
@@ -435,58 +468,49 @@ namespace Oxide.Plugins
             switch(block.grade)
             {
                 case BuildingGrade.Enum.Twigs:
-                    if(hascup)
-                        multiplier = c_twigMultiplier;
+                    if(hascup) multiplier = c_twigMultiplier;
                     type = "twig";
                     break;
                 case BuildingGrade.Enum.Wood:
                     if(isHighWall)
                     {
-                        if(hascup)
-                            multiplier = c_highWoodWallMultiplier;
+                        if(hascup) multiplier = c_highWoodWallMultiplier;
                         type = "high wood wall";
                     }
                     else if(isHighGate)
                     {
-                        if(hascup)
-                            multiplier = c_highWoodWallMultiplier;
+                        if(hascup) multiplier = c_highWoodWallMultiplier;
                         type = "high wood gate";
                     }
                     else
                     {
-                        if(hascup)
-                            multiplier = c_woodMultiplier;
+                        if(hascup) multiplier = c_woodMultiplier;
                         type = "wood";
                     }
                     break;
                 case BuildingGrade.Enum.Stone:
                     if(isHighWall)
                     {
-                        if(hascup)
-                            multiplier = c_highStoneWallMultiplier;
+                        if(hascup) multiplier = c_highStoneWallMultiplier;
                         type = "high stone wall";
                     }
                     else if(isHighGate)
                     {
-                        if(hascup)
-                            multiplier = c_highStoneWallMultiplier;
+                        if(hascup) multiplier = c_highStoneWallMultiplier;
                         type = "high stone gate";
                     }
                     else
                     {
-                        if(hascup)
-                            multiplier = c_stoneMultiplier;
+                        if(hascup) multiplier = c_stoneMultiplier;
                         type = "stone";
                     }
                     break;
                 case BuildingGrade.Enum.Metal:
-                    if(hascup)
-                        multiplier = c_sheetMultiplier;
+                    if(hascup) multiplier = c_sheetMultiplier;
                     type = "sheet";
                     break;
                 case BuildingGrade.Enum.TopTier:
-                    if(hascup)
-                        multiplier = c_armoredMultiplier;
+                    if(hascup) multiplier = c_armoredMultiplier;
                     type = "armored";
                     break;
                 default:

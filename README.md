@@ -1,7 +1,5 @@
-# NoDecay (official)
+## NoDecay (official)
 Scales or disables decay of items, and deployables 
-
-[Download](https://code.remod.org/NoDecay.cs)
 
 **No Decay** nullifies or scales down/up any decay damage applied to any item in game (except of small stashes). Each building tier has a different multiplier,  so do all other entities.
 
@@ -11,7 +9,8 @@ The default configuration does **NOT** affect *Twig decay* but nullifies all dam
 For entities, use "cupboardCheckEntity: true" and "cupboardRange: number" to configure how far the entities can be from a cupboard before they will decay.  The default is 30 game meters (?), which may or may not be enough for your needs.  Adjust as desired.
 
 Note, the default is cupboardCheckEntity: false, which will skip checking for cupboards in range of entities.  It will still check for blocks attached to cupboards, which should be more accurate.
-## Configuration
+
+### Configuration
 
 ```json
 {
@@ -29,7 +28,7 @@ Note, the default is cupboardCheckEntity: false, which will skip checking for cu
     "cupboardCheckEntity": false,
     "cupboardRange": 30.0,
     "usePermission": false,
-    "DestroyOnZero": false
+    "DestroyOnZero": true
   },
   "Mutipliers": {
     "armoredMultiplier": 0.0,
@@ -84,15 +83,16 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
  
  Set DestroyOnZero to true to enable destroying entities when health is zero.  This is most likely needed due to a bug in the Feb 2020 Rust.
 
-## Permissions
+### Permissions
+    - nodecay.use   -- Required for NoDecay to work for a user, if the usePermission flag is set to true.
+    - nodecay.admin -- Required to use the /nodecay commands below
 
-If the "usePermission" flag is set to true, the following permission is required to enable NoDecay for a user:
+### Commands
+    - `nodecay log` -- Toggle logging of debug info to oxide log and rcon
+    - `nodecay info` -- Display current configuration (must still set manually and reload)
 
-nodecay.use
-
-## Credits
-
-- **Deicide666ra** and **Piarb**, the original authors of this plugin
-- **Diesel**, for helping maintain the plugin
+### Credits
+    - **Deicide666ra** and **Piarb**, the original authors of this plugin
+    - **Diesel**, for helping maintain the plugin
 
 Thanks to Deicide666ra, the original author of this plugin, for his permission to continue his work.
