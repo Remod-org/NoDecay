@@ -5,7 +5,7 @@ using Oxide.Core.Plugins;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "Diesel_42o", "1.0.32", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb
+    [Info("NoDecay", "Diesel_42o", "1.0.33", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb
     [Description("Scales or disables decay of items")]
 
     class NoDecay : RustPlugin
@@ -31,6 +31,7 @@ namespace Oxide.Plugins
         private float c_boatMultiplier;
         private float c_minicopterMultiplier;
         private float c_watchtowerMultiplier;
+        private float c_horseMultiplier;
 
         private bool c_outputToRcon;
 
@@ -51,6 +52,7 @@ namespace Oxide.Plugins
 
             c_deployablesMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "deployablesMultiplier", 0.0));
             c_watchtowerMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "watchtowerMultiplier", 0.0));
+            c_horseMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "horseMultiplier", 0.0));
             c_boxMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "boxMultiplier", 0.0));
             c_sedanMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "sedanMultiplier", 0.0));
             c_baloonMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "baloonMultiplier", 0.0));
@@ -194,6 +196,14 @@ namespace Oxide.Plugins
                 {
                     var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
                     hitInfo.damageTypes.Scale(Rust.DamageType.Decay, c_watchtowerMultiplier);
+
+                    if (c_outputToRcon)
+                        Puts($"Decay ({entity_name}) before: {before} after: {hitInfo.damageTypes.Get(Rust.DamageType.Decay)}");
+                }
+                else if (entity.LookupPrefab().name.Contains("TestRidableHorse"))
+                {
+                    var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
+                    hitInfo.damageTypes.Scale(Rust.DamageType.Decay, c_horseMultiplier);
 
                     if (c_outputToRcon)
                         Puts($"Decay ({entity_name}) before: {before} after: {hitInfo.damageTypes.Get(Rust.DamageType.Decay)}");
