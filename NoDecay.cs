@@ -29,7 +29,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.56", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.57", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -237,7 +237,7 @@ namespace Oxide.Plugins
                     damageAmount = before * configData.Multipliers.minicopterMultiplier;
                     mundane = true;
                 }
-                else if (entity_name.Contains("TestRidableHorse"))
+                else if (entity_name.Contains("RidableHorse"))
                 {
                     damageAmount = before * configData.Multipliers.horseMultiplier;
                     mundane = true;
