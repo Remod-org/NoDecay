@@ -1,3 +1,4 @@
+//#define DEBUG
 #region License
 /*
 Copyright RFC1920 <desolationoutpostpve@gmail.com>
@@ -28,7 +29,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.55", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.56", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -69,11 +70,31 @@ namespace Oxide.Plugins
 
         void Loaded() => LoadConfigValues();
 
+        // Workaround for car chassis that won't die
+        private void OnEntityDeath(ModularCar car, HitInfo hitinfo)
+        {
+#if DEBUG
+            Puts("Car died!  Checking for associated parts...");
+#endif
+            List<BaseEntity> ents = new List<BaseEntity>();
+            Vis.Entities(car.transform.position, 1f, ents);
+            foreach(var ent in ents)
+            {
+                if(ent.name.Contains("module_car_spawned") && !ent.IsDestroyed)
+                {
+#if DEBUG
+                    Puts($"Killing {ent.ShortPrefabName}");
+#endif
+                    ent.Kill(BaseNetworkable.DestroyMode.Gib);
+                }
+            }
+        }
+
         object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitInfo)
         {
             if (!enabled) return null;
-            if(entity == null || hitInfo == null) return null;
-            if(!hitInfo.damageTypes.Has(Rust.DamageType.Decay)) return null;
+            if (entity == null || hitInfo == null) return null;
+            if (!hitInfo.damageTypes.Has(Rust.DamageType.Decay)) return null;
 
             float damageAmount = 0f;
             DateTime tick = DateTime.Now;
@@ -82,11 +103,11 @@ namespace Oxide.Plugins
             bool mundane = false;
             bool isBlock = false;
 
-            if(configData.Global.usePermission)
+            if (configData.Global.usePermission)
             {
-                if(permission.UserHasPermission(owner, "nodecay.use") || owner == "0")
+                if (permission.UserHasPermission(owner, "nodecay.use") || owner == "0")
                 {
-                    if(owner != "0")
+                    if (owner != "0")
                     {
                         OutputRcon($"{entity_name} owner {owner} has NoDecay permission!");
                     }
@@ -270,8 +291,23 @@ namespace Oxide.Plugins
                     entity.health -= damageAmount;
                     if(entity.health == 0 && configData.Global.DestroyOnZero)
                     {
-                        OutputRcon($"Entity completely decayed - destroying!", mundane);
+                        OutputRcon($"Entity {entity_name} completely decayed - destroying!", mundane);
                         if(entity == null) return;
+//                        if(entity as ModularCar != null)
+//                        {
+//                            List<BaseEntity> ents = new List<BaseEntity>();
+//                            Vis.Entities(entity.transform.position, 1f, ents);
+//                            foreach(var ent in ents)
+//                            {
+//                                if(ent.name.Contains("module_car_spawned") && !ent.IsDestroyed)
+//                                {
+//#if DEBUG
+//                                    Puts($"Killing other car part: {ent.ShortPrefabName}");
+//#endif
+//                                    ent.Kill(BaseNetworkable.DestroyMode.Gib);
+//                                }
+//                            }
+//                        }
                         entity.Kill(BaseNetworkable.DestroyMode.Gib);
                     }
                 });
