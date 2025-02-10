@@ -1,22 +1,25 @@
-#region License (MIT)
+#region License
 /*
 Copyright RFC1920 <desolationoutpostpve@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
-files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
-modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
-is furnished to do so, subject to the following conditions:
+files (the "Software"), to use the software subject to the following restrictions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+This copyright and permission notice shall be included in all copies or substantial portions of the Software.
+
+The software must remain unmodified from the version(s) released by the author.
+
+The software may not be redistributed or sold partially or in total without approval from the author.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
 OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-#endregion License Information (MIT)
+#endregion License
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Oxide.Core;
@@ -25,7 +28,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.50", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.52", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -39,6 +42,9 @@ namespace Oxide.Plugins
         public static readonly FieldInfo nextProtectedCalcTime = typeof(BuildingPrivlidge).GetField("nextProtectedCalcTime", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
         public static readonly FieldInfo cachedProtectedMinutes = typeof(BuildingPrivlidge).GetField("cachedProtectedMinutes", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
 
+        [PluginReference]
+        private readonly Plugin JPipes;
+
         void Init()
         {
             permission.RegisterPermission("nodecay.use", this);
@@ -48,7 +54,8 @@ namespace Oxide.Plugins
         void OnServerInitialized()
         {
             if (!configData.Global.disableWarning) return;
-            foreach (BuildingPrivlidge priv in UnityEngine.Object.FindObjectsOfType<BuildingPrivlidge>())
+            //private readonly string ndc = "D2AA9A0376A43CCA72EA06868DCF820C";
+            foreach (BuildingPrivlidge priv in BaseNetworkable.serverEntities.OfType<BuildingPrivlidge>())
             {
                 if (priv == null) return;
                 if ((permission.UserHasPermission(priv.OwnerID.ToString(), "nodecay.use") && configData.Global.usePermission) || !configData.Global.usePermission)
@@ -97,6 +104,19 @@ namespace Oxide.Plugins
 
                 if(entity is BuildingBlock)
                 {
+                    if (configData.Global.useJPipes)
+                    {
+                        if ((bool)JPipes?.Call("IsPipe", entity))
+                        {
+                            if ((bool)JPipes?.Call("IsNoDecayEnabled"))
+                            {
+                                OutputRcon("Found a JPipe with nodecay enabled");
+                                hitInfo.damageTypes.Scale(Rust.DamageType.Decay, 0f);
+                                return null;
+                            }
+                        }
+                    }
+
                     damageAmount = ProcessBuildingDamage(entity, before);
                     isBlock = true;
                 }
@@ -205,7 +225,7 @@ namespace Oxide.Plugins
                     damageAmount = before * configData.Multipliers.scrapcopterMultiplier;
                     mundane = true;
                 }
-                else if(entity_name == "BaseVehicle" || entity.name.Contains("1module_") || entity.name.Contains("2module_") || entity.name.Contains("3module_") || entity.name.Contains("4module_"))
+                else if(entity_name == "BaseVehicle" || entity.name.Contains("vehicle.chassis") || entity.name.Contains("1module_") || entity.name.Contains("2module_") || entity.name.Contains("3module_") || entity.name.Contains("4module_"))
                 {
                     damageAmount = before * configData.Multipliers.vehicleMultiplier;
                     mundane = true;
@@ -580,6 +600,7 @@ namespace Oxide.Plugins
             public bool cupboardCheckEntity = false;
             public float cupboardRange = 30f;
             public bool DestroyOnZero = true;
+            public bool useJPipes = false;
             public bool blockCupboardResources = false;
             public bool blockCupboardWood = false;
             public bool blockCupboardStone = false;
@@ -634,6 +655,10 @@ namespace Oxide.Plugins
             if (configData.Version < new VersionNumber(1, 0, 48))
             {
                 configData.Global.disableWarning = true;
+            }
+            if (configData.Version < new VersionNumber(1, 0, 51))
+            {
+                configData.Global.useJPipes = false;
             }
             configData.Version = Version;
 
