@@ -28,7 +28,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay Pro", "RFC1920", "1.0.1")]
+    [Info("NoDecay Pro", "RFC1920", "1.0.2")]
     [Description("Scales or disables decay of items with decay.upkeep disabled globally.")]
     class NoDecayPro : RustPlugin
     {
@@ -102,7 +102,7 @@ namespace Oxide.Plugins
                 if (configData.Global.usePermission)
                 {
                     var owner = buildingPrivilege.OwnerID.ToString();
-                    if (permission.UserHasPermission(owner, "nodecay.use") || owner == "0")
+                    if (permission.UserHasPermission(owner, "nodecaypro.use") || owner == "0")
                     {
                         if (owner != "0")
                         {
@@ -474,7 +474,7 @@ namespace Oxide.Plugins
         [ChatCommand("nodecay")]
         void CmdInfo(BasePlayer player, string command, string[] args)
         {
-            if (!permission.UserHasPermission(player.UserIDString, "nodecay.admin")) return;
+            if (!permission.UserHasPermission(player.UserIDString, "nodecaypro.admin")) return;
             if(args.Length > 0)
             {
                 if(args[0] == "enable")
@@ -726,7 +726,7 @@ namespace Oxide.Plugins
 
                 if (Instance.configData.Global.usePermission)
                 {
-                    if (Instance.permission.UserHasPermission(owner, "nodecay.use") || owner == "0")
+                    if (Instance.permission.UserHasPermission(owner, "nodecaypro.use") || owner == "0")
                     {
                         if (owner != "0")
                         {
