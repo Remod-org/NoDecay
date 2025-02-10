@@ -1,7 +1,7 @@
 #region License (GPL v2)
 /*
     NoDecay - Scales or disables decay of items for Rust by Facepunch
-    Copyright (c) 2022 RFC1920 <desolationoutpostpve@gmail.com>
+    Copyright (c) 2023 RFC1920 <desolationoutpostpve@gmail.com>
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License v2.0.
@@ -31,7 +31,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.81", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.82", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -105,12 +105,12 @@ namespace Oxide.Plugins
 
                     if (newdecaytime > 0)
                     {
-                        DoLog($"Adding {Math.Floor(newdecaytime).ToString()} minutes of decay time to horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
+                        DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
                         horse.AddDecayDelay(newdecaytime);
                     }
                     else
                     {
-                        DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime)).ToString()} minutes of decay time from horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
+                        DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
                         //horse.nextDecayTime = Time.time + newdecaytime;
                         horse.AddDecayDelay(newdecaytime);
                     }
@@ -125,15 +125,14 @@ namespace Oxide.Plugins
             if (!configData.Global.disableLootWarning) return null;
             if (!permission.UserHasPermission(player.UserIDString, permNoDecayUse) && configData.Global.usePermission) return null;
             if (container == null) return null;
-            var privs = container.GetComponentInParent<BuildingPrivlidge>();
-            if (privs == null) return null;
-
-            TcOverlay(player, privs);
+            BuildingPrivlidge privs = container.GetComponentInParent<BuildingPrivlidge>();
+            if (privs != null) TcOverlay(player);
             return null;
         }
 
         private void OnLootEntityEnd(BasePlayer player, BaseCombatEntity entity)
         {
+            // Can probably comment out ALL of this except for the cuihelper.destroy...
             if (!configData.Global.disableLootWarning) return;
             if (!permission.UserHasPermission(player.UserIDString, permNoDecayUse) && configData.Global.usePermission) return;
             if (entity == null) return;
@@ -142,7 +141,7 @@ namespace Oxide.Plugins
             CuiHelper.DestroyUi(player, TCOVR);
         }
 
-        private void TcOverlay(BasePlayer player, BaseEntity entity)
+        private void TcOverlay(BasePlayer player)
         {
             CuiHelper.DestroyUi(player, TCOVR);
 
@@ -175,7 +174,7 @@ namespace Oxide.Plugins
                 }
                 if (disabled.Contains(buildingPrivilege.OwnerID))
                 {
-                    DoLog($"TC owner {buildingPrivilege.OwnerID.ToString()} has disabled NoDecay.");
+                    DoLog($"TC owner {buildingPrivilege.OwnerID} has disabled NoDecay.");
                     return;
                 }
 
@@ -188,7 +187,7 @@ namespace Oxide.Plugins
 
         private void OnUserDisconnected(IPlayer player)
         {
-            long lc = 0;
+            long lc;
             lastConnected.TryGetValue(player.Id, out lc);
             if (lc > 0)
             {
@@ -217,10 +216,10 @@ namespace Oxide.Plugins
 
         private object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitInfo)
         {
-//            Puts(entity.name);
             if (!enabled) return null;
             if (entity == null || hitInfo == null) return null;
-            if (!hitInfo.damageTypes.Has(Rust.DamageType.Decay)) return null;
+            //if (!hitInfo.damageTypes.Has(Rust.DamageType.Decay)) return null;
+            if (hitInfo.damageTypes.GetMajorityDamageType() != Rust.DamageType.Decay) return null;
 
             float damageAmount = 0f;
             DateTime tick = DateTime.Now;
@@ -246,7 +245,7 @@ namespace Oxide.Plugins
                 }
                 if (disabled.Contains(entity.OwnerID))
                 {
-                    DoLog($"Entity owner {entity.OwnerID.ToString()} has disabled NoDecay.");
+                    DoLog($"Entity owner {entity.OwnerID} has disabled NoDecay.");
                     return null;
                 }
             }
@@ -260,12 +259,12 @@ namespace Oxide.Plugins
                     float days = Math.Abs((now - lc) / 86400);
                     if (days > configData.Global.protectedDays)
                     {
-                        DoLog($"Allowing decay for owner offline for {configData.Global.protectedDays.ToString()} days");
+                        DoLog($"Allowing decay for owner offline for {configData.Global.protectedDays} days");
                         return null;
                     }
                     else
                     {
-                        DoLog($"Owner was last connected {days.ToString()} days ago and is still protected...");
+                        DoLog($"Owner was last connected {days} days ago and is still protected...");
                     }
                 }
             }
@@ -297,7 +296,8 @@ namespace Oxide.Plugins
                 else
                 {
                     // Main check for non-building entities/deployables
-                    foreach (KeyValuePair<string, List<string>> entity_type in entityinfo.Where(x => x.Value.Contains(entity_name)))
+                    KeyValuePair<string, List<string>> entity_type = entityinfo.FirstOrDefault(x => x.Value.Contains(entity_name));
+                    if (!entity_type.Equals(default(KeyValuePair<string, List<string>>)))
                     {
                         if (entity_type.Key.Equals("vehicle") || entity_type.Key.Equals("boat") || entity_type.Key.Equals("balloon") || entity_type.Key.Equals("horse"))
                         {
@@ -307,7 +307,6 @@ namespace Oxide.Plugins
                         if (configData.multipliers.ContainsKey(entity_type.Key))
                         {
                             damageAmount = before * configData.multipliers[entity_type.Key];
-                            break;
                         }
                     }
                 }
@@ -356,13 +355,13 @@ namespace Oxide.Plugins
 
                 if (configData.Debug.logPosition)
                 {
-                    pos = $" at {PositionToGrid(entity.transform.position)} {entity.transform.position.ToString()}";
+                    pos = $" at {PositionToGrid(entity.transform.position)} {entity.transform.position}";
                     zones = string.Join(",", zonedata);
                 }
 
                 NextTick(() =>
                 {
-                    DoLog($"Decay [{entity_name}{pos} - {entity.net.ID.ToString()}] before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
+                    DoLog($"Decay [{entity_name}{pos} - {entity.net.ID}] before: {before} after: {damageAmount}, item health {entity.health}", mundane);
                     if (inzone)
                     {
                         DoLog($"Decay [{entity_name}] in ZoneManager zone(s): {zones}", mundane);
@@ -396,12 +395,12 @@ namespace Oxide.Plugins
                 float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
                 if (newdecaytime > 0)
                 {
-                    DoLog($"Adding {Math.Floor(newdecaytime).ToString()} minutes of decay time to horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
+                    DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
                     horse.AddDecayDelay(newdecaytime);
                 }
                 else
                 {
-                    DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime)).ToString()} minutes of decay time from horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
+                    DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
                     horse.AddDecayDelay(newdecaytime);
                 }
                 horse.SetDecayActive(true);
@@ -416,10 +415,11 @@ namespace Oxide.Plugins
             Vis.Entities(car.transform.position, 1f, ents);
             foreach (BaseEntity ent in ents)
             {
+                if (ent == null) continue;
                 if (ent.name.Contains("module_car_spawned") && !ent.IsDestroyed)
                 {
                     DoLog($"Killing {ent.ShortPrefabName}");
-                    ent.Kill(BaseNetworkable.DestroyMode.Gib);
+                    ent?.Kill(BaseNetworkable.DestroyMode.Gib);
                 }
             }
         }
@@ -568,7 +568,6 @@ namespace Oxide.Plugins
         {
             BuildingBlock block = entity as BuildingBlock;
             float multiplier = 1.0f;
-            float damageAmount = 1.0f;
             bool isHighWall = block.LookupPrefab().name.Contains("wall.external");
             bool isHighGate = block.LookupPrefab().name.Contains("gates.external");
 
@@ -643,7 +642,7 @@ namespace Oxide.Plugins
                     break;
             }
 
-            damageAmount = before * multiplier;
+            float damageAmount = before * multiplier;
 
             DoLog($"Decay ({type}) before: {before} after: {damageAmount}");
             return damageAmount;
@@ -843,7 +842,6 @@ namespace Oxide.Plugins
                         info += "\n\tblockCupboardArmor: " + configData.Global.blockCupboardArmor.ToString();
 
                         Message(iplayer, info);
-                        info = null;
                         return;
                 }
             }
@@ -964,6 +962,7 @@ namespace Oxide.Plugins
             enabled = false;
             Puts($"{Name} disabled");
         }
+
         private void EnableMe()
         {
             if (!configData.Global.respondToActivationHooks) return;
@@ -974,7 +973,7 @@ namespace Oxide.Plugins
 
         #region helpers
         // From PlayerDatabase
-        private long ToEpochTime(DateTime dateTime)
+        private static long ToEpochTime(DateTime dateTime)
         {
             DateTime date = dateTime.ToUniversalTime();
             long ticks = date.Ticks - new DateTime(1970, 1, 1, 0, 0, 0, 0).Ticks;
