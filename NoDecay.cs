@@ -31,7 +31,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.88", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.89", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -122,6 +122,7 @@ namespace Oxide.Plugins
 
         private object CanLootEntity(BasePlayer player, StorageContainer container)
         {
+            if (!player.userID.IsSteamId()) return null;
             if (!configData.Global.disableLootWarning) return null;
             if (!permission.UserHasPermission(player.UserIDString, permNoDecayUse) && configData.Global.usePermission) return null;
             if (container == null) return null;
@@ -132,12 +133,7 @@ namespace Oxide.Plugins
 
         private void OnLootEntityEnd(BasePlayer player, BaseCombatEntity entity)
         {
-            // Can probably comment out ALL of this except for the cuihelper.destroy...
-            if (!configData.Global.disableLootWarning) return;
-            if (!permission.UserHasPermission(player.UserIDString, permNoDecayUse) && configData.Global.usePermission) return;
-            if (entity == null) return;
-            if (entity.GetComponentInParent<BuildingPrivlidge>() == null) return;
-
+            if (!player.userID.IsSteamId()) return;
             CuiHelper.DestroyUi(player, TCOVR);
         }
 
@@ -187,31 +183,140 @@ namespace Oxide.Plugins
 
         private void OnUserDisconnected(IPlayer player)
         {
-            long lc;
-            lastConnected.TryGetValue(player.Id, out lc);
-            if (lc > 0)
-            {
-                lastConnected[player.Id] = ToEpochTime(DateTime.UtcNow);
-            }
-            else
-            {
-                lastConnected.Add(player.Id, ToEpochTime(DateTime.UtcNow));
-            }
+            lastConnected[player.Id] = ToEpochTime(DateTime.UtcNow);
             SaveData();
         }
 
         private void LoadData()
         {
-            entityinfo = Interface.Oxide.DataFileSystem.ReadObject<Dictionary<string, List<string>>>(Name + "/entityinfo");
-            lastConnected = Interface.Oxide.DataFileSystem.ReadObject<Dictionary<string, long>>(Name + "/lastconnected");
-            disabled = Interface.Oxide.DataFileSystem.ReadObject<List<ulong>>(Name + "/disabled");
+            entityinfo = Interface.GetMod().DataFileSystem.ReadObject<Dictionary<string, List<string>>>(Name + "/entityinfo");
+            lastConnected = Interface.GetMod().DataFileSystem.ReadObject<Dictionary<string, long>>(Name + "/lastconnected");
+            disabled = Interface.GetMod().DataFileSystem.ReadObject<List<ulong>>(Name + "/disabled");
         }
 
         private void SaveData()
         {
-            Interface.Oxide.DataFileSystem.WriteObject(Name + "/entityinfo", entityinfo);
-            Interface.Oxide.DataFileSystem.WriteObject(Name + "/lastconnected", lastConnected);
-            Interface.Oxide.DataFileSystem.WriteObject(Name + "/disabled", disabled);
+            Interface.GetMod().DataFileSystem.WriteObject(Name + "/entityinfo", entityinfo);
+            Interface.GetMod().DataFileSystem.WriteObject(Name + "/lastconnected", lastConnected);
+            Interface.GetMod().DataFileSystem.WriteObject(Name + "/disabled", disabled);
+        }
+
+        // Heal damage to entities over time since there may be no other way with decay disabled.
+        private object OnDecayDamage(DecayEntity entity)
+        {
+            if (!enabled) return null;
+            if (!(configData.Global.healBuildings || configData.Global.healEntities)) return null;
+            float single = Time.time - entity.lastDecayTick;
+
+            if (entity == null) return null;
+            if (entity?.OwnerID == 0) return null;
+            if (entity.health == entity.MaxHealth()) return null;
+            if (!CheckPerm(entity, entity?.OwnerID.ToString())) return null;
+
+            float entityHealAmount = entity.MaxHealth() * configData.Global.healPercentage;
+
+            if (entity is BuildingBlock && configData.Global.healBuildings)
+            {
+                DoLog($"Healing damage to {entity?.ShortPrefabName}/{(entity as BuildingBlock)?.grade} owned by {entity?.OwnerID} (amount={entityHealAmount}). Current health: {entity.health}");
+                entity.Heal(entityHealAmount);
+                return true;
+            }
+            else if (configData.Global.healEntities)
+            {
+                DoLog($"Healing damage to {entity?.ShortPrefabName} owned by {entity?.OwnerID} (amount={entityHealAmount}). Current health {entity.health}");
+                entity.Heal(entityHealAmount);
+                return true;
+            }
+            return null;
+        }
+
+        //private object OnDecayHeal(DecayEntity entity)
+
+        private bool CheckPerm(BaseCombatEntity entity, string owner)
+        {
+            string entity_name = entity.LookupPrefab().name.ToLower();
+            ulong bpOwner = 0;
+
+            if (configData.Global.usePermission)
+            {
+                if (permission.UserHasPermission(owner, permNoDecayUse) || owner == "0")
+                {
+                    if (owner != "0")
+                    {
+                        DoLog($"{entity_name} owner {owner} has NoDecay permission!");
+                    }
+                }
+                else if (configData.Global.useTCOwnerToCheckPermission)
+                {
+                    BuildingPrivlidge bp = entity?.GetBuildingPrivilege();
+                    if (bp?.OwnerID != 0 && permission.UserHasPermission(bp?.OwnerID.ToString(), permNoDecayUse))
+                    {
+                        bpOwner = bp.OwnerID;
+                        DoLog($"{entity_name} TC owner {bp?.OwnerID} has NoDecay permission!");
+                    }
+                }
+                else
+                {
+                    DoLog($"{entity_name} owner {owner} does NOT have NoDecay permission.  Standard decay in effect.");
+                    return false;
+                }
+
+                if (disabled.Contains(entity.OwnerID))
+                {
+                    DoLog($"Entity owner {entity.OwnerID} has disabled NoDecay.");
+                    return false;
+                }
+                else if (bpOwner > 0 && disabled.Contains(bpOwner))
+                {
+                    DoLog($"Entity TC owner {bpOwner} has disabled NoDecay.");
+                    return false;
+                }
+            }
+            if (configData.Global.protectedDays > 0 && entity.OwnerID > 0)
+            {
+                long lc;
+                lastConnected.TryGetValue(entity.OwnerID.ToString(), out lc);
+                if (lc > 0)
+                {
+                    long now = ToEpochTime(DateTime.UtcNow);
+                    float days = Math.Abs((now - lc) / 86400);
+                    bool friend = false;
+                    if (configData.Global.useBPAuthListForProtectedDays)
+                    {
+                        BuildingPrivlidge bp = entity?.GetBuildingPrivilege();
+                        if (bp != null)
+                        {
+                            foreach (ProtoBuf.PlayerNameID p in bp.authorizedPlayers)
+                            {
+                                if (p?.userid == entity.OwnerID) continue;
+                                long lastcon;
+                                lastConnected.TryGetValue(entity.OwnerID.ToString(), out lastcon);
+                                days = Math.Abs((now - lastcon) / 86400);
+                                if (days <= configData.Global.protectedDays)
+                                {
+                                    friend = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (days > configData.Global.protectedDays)
+                    {
+                        DoLog($"Allowing decay for owner offline for {configData.Global.protectedDays} days");
+                        return false;
+                    }
+                    else if (friend)
+                    {
+                        DoLog($"Friend authorized on local TC was last connected {days} days ago and is still protected...");
+                    }
+                    else
+                    {
+                        DoLog($"Owner was last connected {days} days ago and is still protected...");
+                    }
+                }
+            }
+            return true;
         }
 
         private object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitInfo)
@@ -229,45 +334,7 @@ namespace Oxide.Plugins
             bool mundane = false;
             bool isBlock = false;
 
-            if (configData.Global.usePermission)
-            {
-                if (permission.UserHasPermission(owner, permNoDecayUse) || owner == "0")
-                {
-                    if (owner != "0")
-                    {
-                        DoLog($"{entity_name} owner {owner} has NoDecay permission!");
-                    }
-                }
-                else
-                {
-                    DoLog($"{entity_name} owner {owner} does NOT have NoDecay permission.  Standard decay in effect.");
-                    return null;
-                }
-                if (disabled.Contains(entity.OwnerID))
-                {
-                    DoLog($"Entity owner {entity.OwnerID} has disabled NoDecay.");
-                    return null;
-                }
-            }
-            if (configData.Global.protectedDays > 0 && entity.OwnerID > 0)
-            {
-                long lc = 0;
-                lastConnected.TryGetValue(entity.OwnerID.ToString(), out lc);
-                if (lc > 0)
-                {
-                    long now = ToEpochTime(DateTime.UtcNow);
-                    float days = Math.Abs((now - lc) / 86400);
-                    if (days > configData.Global.protectedDays)
-                    {
-                        DoLog($"Allowing decay for owner offline for {configData.Global.protectedDays} days");
-                        return null;
-                    }
-                    else
-                    {
-                        DoLog($"Owner was last connected {days} days ago and is still protected...");
-                    }
-                }
-            }
+            if (!CheckPerm(entity, owner)) return null;
 
             try
             {
@@ -456,13 +523,14 @@ namespace Oxide.Plugins
 
             List<string> names = new List<string>();
             foreach (BaseCombatEntity ent in Resources.FindObjectsOfTypeAll<BaseCombatEntity>())
+            //foreach (BaseCombatEntity ent in UnityEngine.Object.FindObjectsOfType<BaseCombatEntity>())
             {
-                string entity_name = ent.ShortPrefabName.ToLower();
+                string entity_name = ent.ShortPrefabName?.ToLower();
+                DoLog($"Checking {entity_name}");
                 if (entity_name == "cupboard.tool.deployed") continue;
                 if (entity_name == null) continue;
                 if (names.Contains(entity_name)) continue; // Saves 20-30 seconds of processing time.
                 names.Add(entity_name);
-                //DoLog($"Checking {entity_name}");
 
                 if (entity_name.Contains("campfire") || entity_name.Contains("skull_fire_pit"))
                 {
@@ -791,7 +859,7 @@ namespace Oxide.Plugins
         [Command("nodecay")]
         private void CmdInfo(IPlayer iplayer, string command, string[] args)
         {
-            if (permission.UserHasPermission(iplayer.Id, permNoDecayAdmin) && args.Length > 0)
+            if ((permission.UserHasPermission(iplayer.Id, permNoDecayAdmin) && args.Length > 0) || iplayer.IsServer)
             {
                 switch (args[0])
                 {
@@ -815,6 +883,7 @@ namespace Oxide.Plugins
                         info += "\n\tbbq: " + configData.multipliers["bbq"].ToString();
                         info += "\n\tboat: " + configData.multipliers["boat"].ToString();
                         info += "\n\tbox: " + configData.multipliers["box"].ToString();
+                        info += "\n\tbuilding: " + configData.multipliers["building"].ToString();
                         info += "\n\tcampfire" + configData.multipliers["campfire"].ToString();
                         info += "\n\tdeployables: " + configData.multipliers["deployables"].ToString();
                         info += "\n\tentityCupboard: " + configData.multipliers["entityCupboard"].ToString();
@@ -1043,7 +1112,6 @@ namespace Oxide.Plugins
             player.ChatMessage(sb.ToString());
         }
 
-        // Just here to cleanup the code a bit
         private void DoLog(string message, bool mundane = false)
         {
             if (configData.Debug.outputToRcon)
@@ -1073,6 +1141,8 @@ namespace Oxide.Plugins
         private class Global
         {
             public bool usePermission;
+            public bool useTCOwnerToCheckPermission;
+            public bool useBPAuthListForProtectedDays;
             public bool requireCupboard;
             public bool cupboardCheckEntity;
             public float protectedDays;
@@ -1086,6 +1156,9 @@ namespace Oxide.Plugins
             public bool blockCupboardStone;
             public bool blockCupboardMetal;
             public bool blockCupboardArmor;
+            public bool healEntities;
+            public bool healBuildings;
+            public float healPercentage;
             public bool disableWarning;
             public bool disableLootWarning;
             public bool protectVehicleOnLift;
@@ -1103,11 +1176,16 @@ namespace Oxide.Plugins
                 Debug = new Debug(),
                 Global = new Global()
                 {
+                    useBPAuthListForProtectedDays = false,
+                    useTCOwnerToCheckPermission = false,
                     protectedDays = 0,
                     cupboardRange = 30f,
                     DestroyOnZero = true,
                     disableWarning = true,
                     protectVehicleOnLift = true,
+                    healEntities = false,
+                    healBuildings = false,
+                    healPercentage = 0.01f,
                     protectedDisplayTime = 44000,
                     warningTime = 10,
                     overrideZoneManager = new List<string>() { "vehicle", "balloon" },
@@ -1176,7 +1254,14 @@ namespace Oxide.Plugins
             if (configData.Version < new VersionNumber(1, 0, 87))
             {
                 configData.multipliers.Add("building", 0);
+                UpdateEnts();
             }
+
+            if (configData.Global.healPercentage == 0 || configData.Global.healPercentage >= 1)
+            {
+                configData.Global.healPercentage = 0.01f;
+            }
+
             configData.Version = Version;
 
             SaveConfig(configData);
