@@ -28,7 +28,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.53", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.54", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -280,7 +280,7 @@ namespace Oxide.Plugins
             finally
             {
                 double ms = (DateTime.Now - tick).TotalMilliseconds;
-                if(ms > 10 || configData.Debug.outputMundane) Puts($"NoDecay.OnEntityTakeDamage on {entity_name} took {ms} ms to execute.");
+                if(ms > configData.Global.warningTime || configData.Debug.outputMundane) Puts($"NoDecay.OnEntityTakeDamage on {entity_name} took {ms} ms to execute.");
             }
         }
 
@@ -624,6 +624,7 @@ namespace Oxide.Plugins
             public bool blockCupboardArmor = false;
             public bool disableWarning = true;
             public bool protectVehicleOnLift = true;
+            public double warningTime = 10;
         }
 
         private class Multipliers
