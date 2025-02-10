@@ -20,7 +20,8 @@ NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46. 
 {
   "Debug": {
     "outputToRcon": false,
-    "outputMundane": false
+    "outputMundane": false,
+    "logPosition": false
   },
     "Global": {
     "blockCupboardResources": false,
@@ -40,7 +41,7 @@ NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46. 
     "protectedDisplayTime": 1440.0,
     "warningTime": 10.0
   },
-  "Multipliers": {
+  "multipliers": {
     "entityCupboardMultiplier": 0.0,
     "twigMultiplier": 1.0,
     "woodMultiplier": 0.0,
@@ -69,7 +70,7 @@ NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46. 
   "Version": {
     "Major": 1,
     "Minor": 0,
-    "Patch": 46
+    "Patch": 71
   }
 }
 ```
