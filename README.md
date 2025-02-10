@@ -126,11 +126,13 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
 
 ### Commands
 These commands work for any user regardless of permission:
-    = `nodecay ?` -- For users to show current global as well as personal status for enable/disable of NoDecay
+
+    - `nodecay ?` -- For users to show current global as well as personal status for enable/disable of NoDecay
 	- `nodecay off` -- For users to set their status as disabled.  In this case, decay will be standard for this user's owned items
 	- `nodecay on` -- For users to set their status as enabled.  In this case, decay will be managed by NoDecay for this user's owned items
 
 These commands only work for users with the nodecay.admin permission:
+
     - `nodecay log` -- Toggle logging of debug info to oxide log and rcon
     - `nodecay info` -- Display current configuration (must still set manually in config and reload)
 	- `nodecay enable` -- Toggle global enable status
