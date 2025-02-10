@@ -31,7 +31,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.85", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.86", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -145,13 +145,13 @@ namespace Oxide.Plugins
         {
             CuiHelper.DestroyUi(player, TCOVR);
 
-            CuiElementContainer container = UI.Container(TCOVR, UI.Color("3E3C37", 1f), "0.651 0.604", "0.946 0.636", true, "Overlay");
+            CuiElementContainer container = UI.Container(TCOVR, UI.Color("3E3C37", 1f), "0.651 0.604", "0.946 0.6365", true, "Overlay");
             UI.Label(ref container, TCOVR, UI.Color("#cacaca", 1f), Lang("protby"), 14, "0 0", "1 1");
 
             CuiHelper.AddUi(player, container);
         }
 
-        private void Loaded() => LoadConfigValues();
+        private void Loaded() => LoadConfigVariables();
 
         private void OnEntitySaved(BuildingPrivlidge buildingPrivilege, BaseNetworkable.SaveInfo saveInfo)
         {
@@ -1057,7 +1057,6 @@ namespace Oxide.Plugins
             public Debug Debug;
             public Global Global;
             public SortedDictionary<string, float> multipliers;
-            public Multipliers Multipliers = new Multipliers();
             public VersionNumber Version;
         }
 
@@ -1091,37 +1090,6 @@ namespace Oxide.Plugins
             public double warningTime;
             public List<string> overrideZoneManager = new List<string>();
             public bool respondToActivationHooks;
-        }
-
-        private class Multipliers
-        {
-            // Legacy
-            public float entityCupboardMultiplier;
-            public float twigMultiplier;
-            public float woodMultiplier;
-            public float stoneMultiplier;
-            public float sheetMultiplier;
-            public float armoredMultiplier;
-            public float baloonMultiplier;
-            public float barricadeMultiplier;
-            public float bbqMultiplier;
-            public float boatMultiplier;
-            public float boxMultiplier;
-            public float campfireMultiplier;
-            public float deployablesMultiplier;
-            public float furnaceMultiplier;
-            public float highWoodWallMultiplier;
-            public float highStoneWallMultiplier;
-            public float horseMultiplier;
-            public float minicopterMultiplier;
-            public float attackcopterMultiplier;
-            public float scrapcopterMultiplier;
-            public float samMultiplier;
-            public float sedanMultiplier;
-            public float trapMultiplier;
-            public float vehicleMultiplier;
-            public float watchtowerMultiplier;
-            public float waterMultiplier;
         }
 
         protected override void LoadDefaultConfig()
@@ -1177,43 +1145,9 @@ namespace Oxide.Plugins
             SaveConfig(configData);
         }
 
-        private void LoadConfigValues()
+        private void LoadConfigVariables()
         {
             configData = Config.ReadObject<ConfigData>();
-
-            if (configData.Version < new VersionNumber(1, 0, 63))
-            {
-                configData.multipliers = new SortedDictionary<string, float>()
-                {
-                    { "entityCupboard", configData.Multipliers.entityCupboardMultiplier },
-                    { "twig", configData.Multipliers.twigMultiplier },
-                    { "wood", configData.Multipliers.woodMultiplier },
-                    { "stone", configData.Multipliers.stoneMultiplier },
-                    { "sheet", configData.Multipliers.sheetMultiplier },
-                    { "armored", configData.Multipliers.armoredMultiplier },
-                    { "balloon", configData.Multipliers.baloonMultiplier },
-                    { "barricade", configData.Multipliers.barricadeMultiplier },
-                    { "bbq", configData.Multipliers.bbqMultiplier },
-                    { "boat", configData.Multipliers.boatMultiplier },
-                    { "box", configData.Multipliers.boxMultiplier },
-                    { "campfire", configData.Multipliers.campfireMultiplier },
-                    { "furnace", configData.Multipliers.furnaceMultiplier },
-                    { "highWoodWall", configData.Multipliers.highWoodWallMultiplier },
-                    { "highStoneWall", configData.Multipliers.highStoneWallMultiplier },
-                    { "horse", configData.Multipliers.horseMultiplier },
-                    { "minicopter", configData.Multipliers.minicopterMultiplier },
-                    { "attackcopter", configData.Multipliers.attackcopterMultiplier },
-                    { "sam", configData.Multipliers.samMultiplier },
-                    { "scrapcopter", configData.Multipliers.scrapcopterMultiplier },
-                    { "sedan", configData.Multipliers.sedanMultiplier },
-                    { "trap", configData.Multipliers.trapMultiplier },
-                    { "vehicle", configData.Multipliers.vehicleMultiplier },
-                    { "watchtower", configData.Multipliers.watchtowerMultiplier },
-                    { "water", configData.Multipliers.waterMultiplier },
-                    { "deployables", configData.Multipliers.deployablesMultiplier } // For all others not listed
-                };
-                configData.Multipliers = null;
-            }
 
             if (configData.Version < new VersionNumber(1, 0, 73))
             {
