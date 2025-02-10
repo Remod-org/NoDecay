@@ -1,14 +1,15 @@
 ## NoDecay (official)
 Scales or disables decay of items, and deployables 
 
+This is the official release of NoDecay.  Any other versions out there are forks or otherwise unrelated.
+
 **No Decay** nullifies or scales down/up any decay damage applied to any item in game (except of small stashes). Each building tier has a different multiplier,  so do all other entities.
 
 The default configuration does **NOT** affect *Twig decay* but nullifies all damage on all other items.
 
-**As of version 1.0.34** you can optionally also check for the presence of a deployed tool cupboard.  Set requireCupboard to true.  This will check for an attached cupboard for building blocks and a nearby cupboard for entities.
-For entities, use "cupboardCheckEntity: true" and "cupboardRange: number" to configure how far the entities can be from a cupboard before they will decay.  The default is 30 game meters (?), which may or may not be enough for your needs.  Adjust as desired.
+ **As of version 1.0.34** you can optionally also check for the presence of a deployed tool cupboard. Set requireCupboard to true. This will check for an attached cupboard for building blocks and a nearby cupboard for entities. For entities, use "cupboardCheckEntity: true" and "cupboardRange: number" to configure how far the entities can be from a cupboard before they will decay. The default is 30 game meters (?), which may or may not be enough for your needs. Adjust as desired.
 
-Note, the default is cupboardCheckEntity: false, which will skip checking for cupboards in range of entities.  It will still check for blocks attached to cupboards, which should be more accurate.
+ Note, the default is cupboardCheckEntity: false, which will skip checking for cupboards in range of entities. It will still check for blocks attached to cupboards, which should be more accurate.
 
 ### Configuration
 NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46.  Older configs should be upgraded automatically.
@@ -124,9 +125,27 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
     - nodecay.admin -- Required to use the /nodecay commands below
 
 ### Commands
+These commands work for any user regardless of permission:
+    = `nodecay ?` -- For users to show current global as well as personal status for enable/disable of NoDecay
+	- `nodecay off` -- For users to set their status as disabled.  In this case, decay will be standard for this user's owned items
+	- `nodecay on` -- For users to set their status as enabled.  In this case, decay will be managed by NoDecay for this user's owned items
+
+These commands only work for users with the nodecay.admin permission:
     - `nodecay log` -- Toggle logging of debug info to oxide log and rcon
-    - `nodecay logm` -- Toggle logging of mundane debug info to oxide log and rcon
-    - `nodecay info` -- Display current configuration (must still set manually and reload)
+    - `nodecay info` -- Display current configuration (must still set manually in config and reload)
+	- `nodecay enable` -- Toggle global enable status
+	- `nodecay update` -- Update the list of entities.  This is normally run in the background at each wipe for newly-introduced items.
+
+### Developers
+A couple of hooks have been implemented:
+
+    - private bool NoDecayGet(ulong playerid=0)
+	    - Returns global enabled status if playerid == 0
+        - Returns player status if playerid > 0
+
+    - private object NoDecaySet(ulong playerid=0, bool status=true)
+	    - Sets global status if playerid == 0
+        - Sets player status if playerid > 0
 
 ### Credits
     - **Deicide666ra** and **Piarb**, the original authors of this plugin

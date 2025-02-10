@@ -57,6 +57,8 @@ namespace Oxide.Plugins
                 ["ndison"] = "NoDecay has been turned ON for your owned entities and buildings",
                 ["ndstatus"] = "NoDecay enabled set to {0}",
                 ["nddebug"] = "Debug logging set to {0}",
+                ["perm"] = "You have permission to use NoDecay.",
+                ["noperm"] = "You DO NOT have permission to use NoDecay.",
                 ["ndsettings"] = "NoDecay current settings:\n  Multipliers:"
             }, this);
         }
@@ -620,65 +622,66 @@ namespace Oxide.Plugins
             {
                 if (args.Length > 0)
                 {
-                    if (args[0] == "enable")
+                    switch (args[0])
                     {
-                        enabled = !enabled;
-                        Message(iplayer, "ndstatus", enabled.ToString());
-                        SaveConfig();
-                    }
-                    else if (args[0] == "log")
-                    {
-                        configData.Debug.outputToRcon = !configData.Debug.outputToRcon;
-                        Message(iplayer, "nddebug", configData.Debug.outputToRcon.ToString());
-                    }
-                    else if (args[0] == "update")
-                    {
-                        UpdateEnts();
-                    }
-                    else if (args[0] == "info")
-                    {
-                        string info = Lang("ndsettings");
-                        info += "\n\tarmored: " + configData.multipliers["armored"]; ToString();
-                        info += "\n\tballoon: " + configData.multipliers["balloon"]; ToString();
-                        info += "\n\tbarricade: " + configData.multipliers["barricade"]; ToString();
-                        info += "\n\tbbq: " + configData.multipliers["bbq"]; ToString();
-                        info += "\n\tboat: " + configData.multipliers["boat"]; ToString();
-                        info += "\n\tbox: " + configData.multipliers["box"]; ToString();
-                        info += "\n\tcampfire" + configData.multipliers["campfire"]; ToString();
-                        info += "\n\tdeployables: " + configData.multipliers["deployables"]; ToString();
-                        info += "\n\tentityCupboard: " + configData.multipliers["entityCupboard"]; ToString();
-                        info += "\n\tfurnace: " + configData.multipliers["furnace"]; ToString();
-                        info += "\n\thighWoodWall: " + configData.multipliers["highWoodWall"]; ToString();
-                        info += "\n\thighStoneWall: " + configData.multipliers["highStoneWall"]; ToString();
-                        info += "\n\thorse: " + configData.multipliers["horse"]; ToString();
-                        info += "\n\tminicopter: " + configData.multipliers["minicopter"]; ToString();
-                        info += "\n\tsam: " + configData.multipliers["sam"]; ToString();
-                        info += "\n\tscrapcopter: " + configData.multipliers["scrapcopter"]; ToString();
-                        info += "\n\tsedan: " + configData.multipliers["sedan"]; ToString();
-                        info += "\n\tsheet: " + configData.multipliers["sheet"]; ToString();
-                        info += "\n\tstone: " + configData.multipliers["stone"]; ToString();
-                        info += "\n\ttrap: " + configData.multipliers["trap"]; ToString();
-                        info += "\n\ttwig: " + configData.multipliers["twig"]; ToString();
-                        info += "\n\tvehicle: " + configData.multipliers["vehicle"]; ToString();
-                        info += "\n\twatchtower: " + configData.multipliers["watchtower"]; ToString();
-                        info += "\n\twood: " + configData.multipliers["wood"]; ToString();
+                        case "enable":
+                            enabled = !enabled;
+                            Message(iplayer, "ndstatus", enabled.ToString());
+                            SaveConfig();
+                            return;
+                        case "log":
+                            configData.Debug.outputToRcon = !configData.Debug.outputToRcon;
+                            Message(iplayer, "nddebug", configData.Debug.outputToRcon.ToString());
+                            return;
+                        case "update":
+                            UpdateEnts();
+                            return;
+                        case "info":
+                            string info = Lang("ndsettings");
+                            info += "\n\tarmored: " + configData.multipliers["armored"]; ToString();
+                            info += "\n\tballoon: " + configData.multipliers["balloon"]; ToString();
+                            info += "\n\tbarricade: " + configData.multipliers["barricade"]; ToString();
+                            info += "\n\tbbq: " + configData.multipliers["bbq"]; ToString();
+                            info += "\n\tboat: " + configData.multipliers["boat"]; ToString();
+                            info += "\n\tbox: " + configData.multipliers["box"]; ToString();
+                            info += "\n\tcampfire" + configData.multipliers["campfire"]; ToString();
+                            info += "\n\tdeployables: " + configData.multipliers["deployables"]; ToString();
+                            info += "\n\tentityCupboard: " + configData.multipliers["entityCupboard"]; ToString();
+                            info += "\n\tfurnace: " + configData.multipliers["furnace"]; ToString();
+                            info += "\n\thighWoodWall: " + configData.multipliers["highWoodWall"]; ToString();
+                            info += "\n\thighStoneWall: " + configData.multipliers["highStoneWall"]; ToString();
+                            info += "\n\thorse: " + configData.multipliers["horse"]; ToString();
+                            info += "\n\tminicopter: " + configData.multipliers["minicopter"]; ToString();
+                            info += "\n\tsam: " + configData.multipliers["sam"]; ToString();
+                            info += "\n\tscrapcopter: " + configData.multipliers["scrapcopter"]; ToString();
+                            info += "\n\tsedan: " + configData.multipliers["sedan"]; ToString();
+                            info += "\n\tsheet: " + configData.multipliers["sheet"]; ToString();
+                            info += "\n\tstone: " + configData.multipliers["stone"]; ToString();
+                            info += "\n\ttrap: " + configData.multipliers["trap"]; ToString();
+                            info += "\n\ttwig: " + configData.multipliers["twig"]; ToString();
+                            info += "\n\tvehicle: " + configData.multipliers["vehicle"]; ToString();
+                            info += "\n\twatchtower: " + configData.multipliers["watchtower"]; ToString();
+                            info += "\n\twood: " + configData.multipliers["wood"]; ToString();
 
-                        info += "\n\n\tEnabled: " + enabled.ToString();
-                        info += "\n\tdisableWarning: " + configData.Global.disableWarning.ToString();
-                        info += "\n\tprotectedDays: " + configData.Global.protectedDays.ToString();
-                        info += "\n\tprotectVehicleOnLift: " + configData.Global.protectVehicleOnLift.ToString();
-                        info += "\n\tusePermission: " + configData.Global.usePermission.ToString();
-                        info += "\n\trequireCupboard: " + configData.Global.requireCupboard.ToString();
-                        info += "\n\tCupboardEntity: " + configData.Global.cupboardCheckEntity.ToString();
-                        info += "\n\tcupboardRange: " + configData.Global.cupboardRange.ToString();
-                        info += "\n\tblockCupboardResources: " + configData.Global.blockCupboardResources.ToString();
-                        info += "\n\tblockCupboardWood: " + configData.Global.blockCupboardWood.ToString();
-                        info += "\n\tblockCupboardStone: " + configData.Global.blockCupboardStone.ToString();
-                        info += "\n\tblockCupboardMetal: " + configData.Global.blockCupboardMetal.ToString();
-                        info += "\n\tblockCupboardArmor: " + configData.Global.blockCupboardArmor.ToString();
+                            info += "\n\n\tEnabled: " + enabled.ToString();
+                            info += "\n\tdisableWarning: " + configData.Global.disableWarning.ToString();
+                            info += "\n\tprotectedDays: " + configData.Global.protectedDays.ToString();
+                            info += "\n\tprotectVehicleOnLift: " + configData.Global.protectVehicleOnLift.ToString();
+                            info += "\n\tusePermission: " + configData.Global.usePermission.ToString();
+                            info += "\n\trequireCupboard: " + configData.Global.requireCupboard.ToString();
+                            info += "\n\tCupboardEntity: " + configData.Global.cupboardCheckEntity.ToString();
+                            info += "\n\tcupboardRange: " + configData.Global.cupboardRange.ToString();
+                            info += "\n\tblockCupboardResources: " + configData.Global.blockCupboardResources.ToString();
+                            info += "\n\tblockCupboardWood: " + configData.Global.blockCupboardWood.ToString();
+                            info += "\n\tblockCupboardStone: " + configData.Global.blockCupboardStone.ToString();
+                            info += "\n\tblockCupboardMetal: " + configData.Global.blockCupboardMetal.ToString();
+                            info += "\n\tblockCupboardArmor: " + configData.Global.blockCupboardArmor.ToString();
 
-                        Message(iplayer, info);
-                        info = null;
+                            Message(iplayer, info);
+                            info = null;
+                            return;
+                        default:
+                            break;
                     }
                 }
             }
@@ -687,37 +690,61 @@ namespace Oxide.Plugins
             {
                 bool save = false;
                 ulong id = ulong.Parse(iplayer.Id);
-                if (args[0] == "off")
+                switch (args[0])
                 {
-                    if (!disabled.Contains(id))
-                    {
-                        save = true;
-                        disabled.Add(id);
-                    }
-                    Message(iplayer, "ndstatus", enabled.ToString());
-                    Message(iplayer, "ndisoff");
-                }
-                else if (args[0] == "on")
-                {
-                    if (disabled.Contains(id))
-                    {
-                        save = true;
-                        disabled.Remove(id);
-                    }
-                    Message(iplayer, "ndstatus", enabled.ToString());
-                    Message(iplayer, "ndison");
-                }
-                else if (args[0] == "?")
-                {
-                    Message(iplayer, "ndstatus", enabled.ToString());
-                    if (disabled.Contains(id))
-                    {
+                    case "off":
+                        if (!disabled.Contains(id))
+                        {
+                            save = true;
+                            disabled.Add(id);
+                        }
+                        Message(iplayer, "ndstatus", enabled.ToString());
+                        if (permission.UserHasPermission(iplayer.Id, "nodecay.use"))
+                        {
+                            Message(iplayer, "perm");
+                        }
+                        else
+                        {
+                            Message(iplayer, "noperm");
+                        }
                         Message(iplayer, "ndisoff");
-                    }
-                    else
-                    {
+                        break;
+                    case "on":
+                        if (disabled.Contains(id))
+                        {
+                            save = true;
+                            disabled.Remove(id);
+                        }
+                        Message(iplayer, "ndstatus", enabled.ToString());
+                        if (permission.UserHasPermission(iplayer.Id, "nodecay.use"))
+                        {
+                            Message(iplayer, "perm");
+                        }
+                        else
+                        {
+                            Message(iplayer, "noperm");
+                        }
                         Message(iplayer, "ndison");
-                    }
+                        break;
+                    case "?":
+                        Message(iplayer, "ndstatus", enabled.ToString());
+                        if (permission.UserHasPermission(iplayer.Id, "nodecay.use"))
+                        {
+                            Message(iplayer, "perm");
+                        }
+                        else
+                        {
+                            Message(iplayer, "noperm");
+                        }
+                        if (disabled.Contains(id))
+                        {
+                            Message(iplayer, "ndisoff");
+                        }
+                        else
+                        {
+                            Message(iplayer, "ndison");
+                        }
+                        break;
                 }
                 if (save) SaveData();
             }
