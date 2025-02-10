@@ -62,8 +62,9 @@ NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46. 
     "highWoodWallMultiplier": 0.0,
     "horseMultiplier": 0.0,
     "minicopterMultiplier": 0.0,
-    "samMultiplier": 0.0,
+    "attackcopterMultiplier": 0.0,
     "scrapcopterMultiplier": 0.0,
+    "samMultiplier": 0.0,
     "sedanMultiplier": 0.0,
     "trapMultiplier": 0.0,
     "watchtowerMultiplier": 0.0
@@ -72,7 +73,7 @@ NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46. 
   "Version": {
     "Major": 1,
     "Minor": 0,
-    "Patch": 76
+    "Patch": 83
   }
 }
 ```
