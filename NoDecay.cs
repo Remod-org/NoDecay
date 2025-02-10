@@ -31,7 +31,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.80", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.81", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -1131,7 +1131,7 @@ namespace Oxide.Plugins
                     DestroyOnZero = true,
                     disableWarning = true,
                     protectVehicleOnLift = true,
-                    protectedDisplayTime = 4400,
+                    protectedDisplayTime = 44000,
                     warningTime = 10,
                     overrideZoneManager = new List<string>() { "vehicle", "balloon" },
                     respondToActivationHooks = false
@@ -1218,6 +1218,13 @@ namespace Oxide.Plugins
             if (configData.Version < new VersionNumber(1, 0, 77))
             {
                 configData.Global.overrideZoneManager = new List<string>() { "vehicle", "balloon" };
+            }
+            if (configData.Version < new VersionNumber(1, 0, 81))
+            {
+                if (configData.Global.protectedDisplayTime == 4400)
+                {
+                    configData.Global.protectedDisplayTime = 44000;
+                }
             }
             configData.Version = Version;
 
