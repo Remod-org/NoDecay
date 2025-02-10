@@ -28,6 +28,7 @@ NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46. 
     "requireCupboard": false,
     "cupboardCheckEntity": false,
     "cupboardRange": 30.0,
+    "useCupboardRange": false,
     "usePermission": false,
     "DestroyOnZero": true,
     "disableWarning": true,
@@ -94,6 +95,8 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
 
  Set cupboardRange to a desired value for the cupboardCheckEntity range.  If too high, may affect other user's stuff.  If set too low it may not protect external items if out of range.
  Use "entityCupboardMultiplier" to set the amount of decay for entities in cupboard range.
+
+ Set useCupboardRange to false to ignore the range setting above and simply use the building privilege for the entity.  This is likely more efficient and is the default as of 1.0.65.
  
  Set DestroyOnZero to true to enable destroying entities when health is zero.
 
