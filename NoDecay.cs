@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.34", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
+    [Info("NoDecay", "RFC1920", "1.0.35", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
     [Description("Scales or disables decay of items")]
 
     class NoDecay : RustPlugin
@@ -37,6 +37,7 @@ namespace Oxide.Plugins
         private bool c_outputToRcon;
         private bool c_outputMundane;
         private bool c_requireCupboard;
+        private bool c_CupboardEntity;
         private float c_cupboardRange;
 
         private bool g_configChanged;
@@ -77,11 +78,13 @@ namespace Oxide.Plugins
             try
             {
                 c_requireCupboard = Convert.ToBoolean(GetConfigValue("Global", "requireCupboard", false));
+                c_CupboardEntity  = Convert.ToBoolean(GetConfigValue("Global", "cupboardCheckEntity", false));
                 c_cupboardRange   = Convert.ToSingle(GetConfigValue("Global", "cupboardRange", 30.0));
             }
             catch
             {
                 c_requireCupboard = false;
+                c_CupboardEntity  = false;
                 c_cupboardRange   = 30f;
             }
 
@@ -121,8 +124,15 @@ namespace Oxide.Plugins
 
             if(c_requireCupboard == true)
             {
-                string range = c_cupboardRange.ToString();
-                sb.Append("  · ").Append($"cupboard check ={ true } - entity range ={ range }");
+                if(c_CupboardEntity == true)
+                {
+                    string range = c_cupboardRange.ToString();
+                    sb.Append("  · ").Append($"cupboard check ={ true } - entity range ={ range }");
+                }
+                else
+                {
+                    sb.Append("  · ").Append($"cupboard check ={ true } - entity check ={ false }");
+                }
             }
             else
             {
@@ -186,7 +196,7 @@ namespace Oxide.Plugins
                 {
                     var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
 
-                    if(c_requireCupboard == true)
+                    if(c_requireCupboard && c_CupboardEntity)
                     {
                         // Verify that we should check for a cupboard and ensure that one exists.
                         // If not, multiplier will be standard of 1.0f.
@@ -443,7 +453,7 @@ namespace Oxide.Plugins
                 }
 
                 OutputRcon($"CheckCupboardBlock:     Block owned by cupboard!");
-                Puts($"Privs: {building.buildingPrivileges}");
+                //Puts($"Privs: {building.buildingPrivileges}");
                 return true;
             }
             else
