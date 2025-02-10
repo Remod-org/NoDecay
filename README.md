@@ -33,6 +33,7 @@ NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46. 
     "disableWarning": true,
     "protectedDays": 0.0,
     "protectVehicleOnLift": true,
+    "protectedDisplayTime": 1440.0,
     "warningTime": 10.0
   },
   "Multipliers": {
@@ -95,6 +96,8 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
  Use "entityCupboardMultiplier" to set the amount of decay for entities in cupboard range.
  
  Set DestroyOnZero to true to enable destroying entities when health is zero.
+
+ Set disableWarning to true to disable the "Building Decaying" warning.  This will be set to a default of 4400 minutes (73 hours) based on the value of protectedDisplayTime.  73 hours is enough to hit the default value shown for more than 72 hours of protection without NoDecay.  A warning will still be shown when viewing the contents of the TC.  But, as always, the building is protected anyway since that's what NoDecay is for.  Players may need to periodically open their TC to disable the warning again every couple of days.
 
  Set useJPipes if you have JPipes installed to ensure no decay for JPipes if NoDecay is configured with zero Multiplier for the JPipe building grade.
 

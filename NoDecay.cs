@@ -30,7 +30,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.58", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.59", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -72,6 +72,31 @@ namespace Oxide.Plugins
         }
 
         void Loaded() => LoadConfigValues();
+
+        private void OnEntitySaved(BuildingPrivlidge buildingPrivilege, BaseNetworkable.SaveInfo saveInfo)
+        {
+            OutputRcon("OnEntitySaved called for TC");
+            if (configData.Global.disableWarning)
+            {
+                if (configData.Global.usePermission)
+                {
+                    var owner = buildingPrivilege.OwnerID.ToString();
+                    if (permission.UserHasPermission(owner, "nodecay.use") || owner == "0")
+                    {
+                        if (owner != "0")
+                        {
+                            OutputRcon($"TC owner {owner} has NoDecay permission!");
+                        }
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+                saveInfo.msg.buildingPrivilege.protectedMinutes = configData.Global.protectedDisplayTime;
+                saveInfo.msg.buildingPrivilege.upkeepPeriodMinutes = configData.Global.protectedDisplayTime;
+            }
+        }
 
         void OnUserConnected(IPlayer player) => OnUserDisconnected(player);
         void OnUserDisconnected(IPlayer player)
@@ -339,21 +364,6 @@ namespace Oxide.Plugins
                     {
                         OutputRcon($"Entity {entity_name} completely decayed - destroying!", mundane);
                         if(entity == null) return;
-//                        if(entity as ModularCar != null)
-//                        {
-//                            List<BaseEntity> ents = new List<BaseEntity>();
-//                            Vis.Entities(entity.transform.position, 1f, ents);
-//                            foreach(var ent in ents)
-//                            {
-//                                if(ent.name.Contains("module_car_spawned") && !ent.IsDestroyed)
-//                                {
-//#if DEBUG
-//                                    Puts($"Killing other car part: {ent.ShortPrefabName}");
-//#endif
-//                                    ent.Kill(BaseNetworkable.DestroyMode.Gib);
-//                                }
-//                            }
-//                        }
                         entity.Kill(BaseNetworkable.DestroyMode.Gib);
                     }
                 });
@@ -717,6 +727,7 @@ namespace Oxide.Plugins
             public bool blockCupboardArmor = false;
             public bool disableWarning = true;
             public bool protectVehicleOnLift = true;
+            public float protectedDisplayTime = 4400;
             public double warningTime = 10;
         }
 
