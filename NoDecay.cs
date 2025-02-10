@@ -27,7 +27,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.67", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.68", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -38,6 +38,7 @@ namespace Oxide.Plugins
 
         #region main
         private Dictionary<string, long> lastConnected = new Dictionary<string, long>();
+        private List<ulong> disabled = new List<ulong>();
         private Dictionary<string, List<string>> entityinfo = new Dictionary<string, List<string>>();
 
         [PluginReference]
@@ -47,6 +48,18 @@ namespace Oxide.Plugins
         private string Lang(string key, string id = null, params object[] args) => string.Format(lang.GetMessage(key, this, id), args);
         private void Message(IPlayer player, string key, params object[] args) => player.Message(Lang(key, player.Id, args));
         private void LMessage(IPlayer player, string key, params object[] args) => player.Reply(Lang(key, player.Id, args));
+
+        protected override void LoadDefaultMessages()
+        {
+            lang.RegisterMessages(new Dictionary<string, string>
+            {
+                ["ndisoff"] = "NoDecay has been turned OFF for your owned entities and buildings",
+                ["ndison"] = "NoDecay has been turned ON for your owned entities and buildings",
+                ["ndstatus"] = "NoDecay enabled set to {0}",
+                ["nddebug"] = "Debug logging set to {0}",
+                ["ndsettings"] = "NoDecay current settings:\n  Multipliers:"
+            }, this);
+        }
         #endregion
 
         void Init()
@@ -79,6 +92,12 @@ namespace Oxide.Plugins
                         return;
                     }
                 }
+                if (disabled.Contains(buildingPrivilege.OwnerID))
+                {
+                    OutputRcon($"TC owner {buildingPrivilege.OwnerID.ToString()} has disabled NoDecay.");
+                    return;
+                }
+
                 saveInfo.msg.buildingPrivilege.protectedMinutes = configData.Global.protectedDisplayTime;
                 saveInfo.msg.buildingPrivilege.upkeepPeriodMinutes = configData.Global.protectedDisplayTime;
             }
@@ -104,11 +123,13 @@ namespace Oxide.Plugins
         {
             entityinfo = Interface.Oxide.DataFileSystem.ReadObject<Dictionary<string, List<string>>>(Name + "/entityinfo");
             lastConnected = Interface.Oxide.DataFileSystem.ReadObject<Dictionary<string, long>>(Name + "/lastconnected");
+            disabled = Interface.Oxide.DataFileSystem.ReadObject<List<ulong>>(Name + "/disabled");
         }
         private void SaveData()
         {
             Interface.Oxide.DataFileSystem.WriteObject(Name + "/entityinfo", entityinfo);
             Interface.Oxide.DataFileSystem.WriteObject(Name + "/lastconnected", lastConnected);
+            Interface.Oxide.DataFileSystem.WriteObject(Name + "/disabled", disabled);
         }
 
         object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitInfo)
@@ -140,6 +161,11 @@ namespace Oxide.Plugins
                     OutputRcon($"{entity_name} owner {owner} does NOT have NoDecay permission.  Standard decay in effect.");
                     return null;
                 }
+                if (disabled.Contains(entity.OwnerID))
+                {
+                    OutputRcon($"Entity owner {entity.OwnerID.ToString()} has disabled NoDecay.");
+                    return null;
+                }
             }
             if (configData.Global.protectedDays > 0 && entity.OwnerID > 0)
             {
@@ -167,7 +193,7 @@ namespace Oxide.Plugins
 
                 if (entity is BuildingBlock)
                 {
-                    if (configData.Global.useJPipes)
+                    if (configData.Global.useJPipes && JPipes)
                     {
                         if ((bool)JPipes?.Call("IsPipe", entity))
                         {
@@ -590,68 +616,108 @@ namespace Oxide.Plugins
         [Command("nodecay")]
         void CmdInfo(IPlayer iplayer, string command, string[] args)
         {
-            if (!permission.UserHasPermission(iplayer.Id, "nodecay.admin")) return;
+            if (permission.UserHasPermission(iplayer.Id, "nodecay.admin"))
+            {
+                if (args.Length > 0)
+                {
+                    if (args[0] == "enable")
+                    {
+                        enabled = !enabled;
+                        Message(iplayer, "ndstatus", enabled.ToString());
+                    }
+                    else if (args[0] == "log")
+                    {
+                        configData.Debug.outputToRcon = !configData.Debug.outputToRcon;
+                        Message(iplayer, "nddebug", configData.Debug.outputToRcon.ToString());
+                    }
+                    else if (args[0] == "update")
+                    {
+                        UpdateEnts();
+                    }
+                    else if (args[0] == "info")
+                    {
+                        string info = Lang("ndsettings");
+                        info += "\n\tarmored: " + configData.multipliers["armored"]; ToString();
+                        info += "\n\tballoon: " + configData.multipliers["balloon"]; ToString();
+                        info += "\n\tbarricade: " + configData.multipliers["barricade"]; ToString();
+                        info += "\n\tbbq: " + configData.multipliers["bbq"]; ToString();
+                        info += "\n\tboat: " + configData.multipliers["boat"]; ToString();
+                        info += "\n\tbox: " + configData.multipliers["box"]; ToString();
+                        info += "\n\tcampfire" + configData.multipliers["campfire"]; ToString();
+                        info += "\n\tdeployables: " + configData.multipliers["deployables"]; ToString();
+                        info += "\n\tentityCupboard: " + configData.multipliers["entityCupboard"]; ToString();
+                        info += "\n\tfurnace: " + configData.multipliers["furnace"]; ToString();
+                        info += "\n\thighWoodWall: " + configData.multipliers["highWoodWall"]; ToString();
+                        info += "\n\thighStoneWall: " + configData.multipliers["highStoneWall"]; ToString();
+                        info += "\n\thorse: " + configData.multipliers["horse"]; ToString();
+                        info += "\n\tminicopter: " + configData.multipliers["minicopter"]; ToString();
+                        info += "\n\tsam: " + configData.multipliers["sam"]; ToString();
+                        info += "\n\tscrapcopter: " + configData.multipliers["scrapcopter"]; ToString();
+                        info += "\n\tsedan: " + configData.multipliers["sedan"]; ToString();
+                        info += "\n\tsheet: " + configData.multipliers["sheet"]; ToString();
+                        info += "\n\tstone: " + configData.multipliers["stone"]; ToString();
+                        info += "\n\ttrap: " + configData.multipliers["trap"]; ToString();
+                        info += "\n\ttwig: " + configData.multipliers["twig"]; ToString();
+                        info += "\n\tvehicle: " + configData.multipliers["vehicle"]; ToString();
+                        info += "\n\twatchtower: " + configData.multipliers["watchtower"]; ToString();
+                        info += "\n\twood: " + configData.multipliers["wood"]; ToString();
+
+                        info += "\n\n\tEnabled: " + enabled.ToString();
+                        info += "\n\tdisableWarning: " + configData.Global.disableWarning.ToString();
+                        info += "\n\tprotectedDays: " + configData.Global.protectedDays.ToString();
+                        info += "\n\tprotectVehicleOnLift: " + configData.Global.protectVehicleOnLift.ToString();
+                        info += "\n\tusePermission: " + configData.Global.usePermission.ToString();
+                        info += "\n\trequireCupboard: " + configData.Global.requireCupboard.ToString();
+                        info += "\n\tCupboardEntity: " + configData.Global.cupboardCheckEntity.ToString();
+                        info += "\n\tcupboardRange: " + configData.Global.cupboardRange.ToString();
+                        info += "\n\tblockCupboardResources: " + configData.Global.blockCupboardResources.ToString();
+                        info += "\n\tblockCupboardWood: " + configData.Global.blockCupboardWood.ToString();
+                        info += "\n\tblockCupboardStone: " + configData.Global.blockCupboardStone.ToString();
+                        info += "\n\tblockCupboardMetal: " + configData.Global.blockCupboardMetal.ToString();
+                        info += "\n\tblockCupboardArmor: " + configData.Global.blockCupboardArmor.ToString();
+
+                        Message(iplayer, info);
+                        info = null;
+                    }
+                }
+            }
             if (args.Length > 0)
             {
-                if (args[0] == "enable")
+                bool save = false;
+                ulong id = ulong.Parse(iplayer.Id);
+                if (args[0] == "off")
                 {
-                    enabled = !enabled;
-                    Message(iplayer, $"NoDecay enabled set to {enabled.ToString()}");
+                    if (!disabled.Contains(id))
+                    {
+                        save = true;
+                        disabled.Add(id);
+                    }
+                    Message(iplayer, "ndstatus", enabled.ToString());
+                    Message(iplayer, "ndisoff");
                 }
-                else if (args[0] == "log")
+                else if (args[0] == "on")
                 {
-                    configData.Debug.outputToRcon = !configData.Debug.outputToRcon;
-                    Message(iplayer, $"Debug logging set to {configData.Debug.outputToRcon.ToString()}");
+                    if (disabled.Contains(id))
+                    {
+                        save = true;
+                        disabled.Remove(id);
+                    }
+                    Message(iplayer, "ndstatus", enabled.ToString());
+                    Message(iplayer, "ndison");
                 }
-                else if (args[0] == "update")
+                else if (args[0] == "?")
                 {
-                    UpdateEnts();
+                    Message(iplayer, "ndstatus", enabled.ToString());
+                    if (disabled.Contains(id))
+                    {
+                        Message(iplayer, "ndison");
+                    }
+                    else
+                    {
+                        Message(iplayer, "ndison");
+                    }
                 }
-                else if (args[0] == "info")
-                {
-                    string info = "NoDecay current settings:\n  Multipliers:";
-                    info += "\n\tarmored: " + configData.multipliers["armored"];ToString();
-                    info += "\n\tballoon: " + configData.multipliers["balloon"];ToString();
-                    info += "\n\tbarricade: " + configData.multipliers["barricade"];ToString();
-                    info += "\n\tbbq: " + configData.multipliers["bbq"];ToString();
-                    info += "\n\tboat: " + configData.multipliers["boat"];ToString();
-                    info += "\n\tbox: " + configData.multipliers["box"];ToString();
-                    info += "\n\tcampfire" + configData.multipliers["campfire"];ToString();
-                    info += "\n\tdeployables: " + configData.multipliers["deployables"];ToString();
-                    info += "\n\tentityCupboard: " + configData.multipliers["entityCupboard"];ToString();
-                    info += "\n\tfurnace: " + configData.multipliers["furnace"];ToString();
-                    info += "\n\thighWoodWall: " + configData.multipliers["highWoodWall"];ToString();
-                    info += "\n\thighStoneWall: " + configData.multipliers["highStoneWall"];ToString();
-                    info += "\n\thorse: " + configData.multipliers["horse"];ToString();
-                    info += "\n\tminicopter: " + configData.multipliers["minicopter"];ToString();
-                    info += "\n\tsam: " + configData.multipliers["sam"];ToString();
-                    info += "\n\tscrapcopter: " + configData.multipliers["scrapcopter"];ToString();
-                    info += "\n\tsedan: " + configData.multipliers["sedan"];ToString();
-                    info += "\n\tsheet: " + configData.multipliers["sheet"];ToString();
-                    info += "\n\tstone: " + configData.multipliers["stone"];ToString();
-                    info += "\n\ttrap: " + configData.multipliers["trap"];ToString();
-                    info += "\n\ttwig: " + configData.multipliers["twig"];ToString();
-                    info += "\n\tvehicle: " + configData.multipliers["vehicle"];ToString();
-                    info += "\n\twatchtower: " + configData.multipliers["watchtower"];ToString();
-                    info += "\n\twood: " + configData.multipliers["wood"];ToString();
-
-                    info += "\n\n\tEnabled: " + enabled.ToString();
-                    info += "\n\tdisableWarning: " + configData.Global.disableWarning.ToString();
-                    info += "\n\tprotectedDays: " + configData.Global.protectedDays.ToString();
-                    info += "\n\tprotectVehicleOnLift: " + configData.Global.protectVehicleOnLift.ToString();
-                    info += "\n\tusePermission: " + configData.Global.usePermission.ToString();
-                    info += "\n\trequireCupboard: " + configData.Global.requireCupboard.ToString();
-                    info += "\n\tCupboardEntity: " + configData.Global.cupboardCheckEntity.ToString();
-                    info += "\n\tcupboardRange: " + configData.Global.cupboardRange.ToString();
-                    info += "\n\tblockCupboardResources: " + configData.Global.blockCupboardResources.ToString();
-                    info += "\n\tblockCupboardWood: " + configData.Global.blockCupboardWood.ToString();
-                    info += "\n\tblockCupboardStone: " + configData.Global.blockCupboardStone.ToString();
-                    info += "\n\tblockCupboardMetal: " + configData.Global.blockCupboardMetal.ToString();
-                    info += "\n\tblockCupboardArmor: " + configData.Global.blockCupboardArmor.ToString();
-
-                    Message(iplayer, info);
-                    info = null;
-                }
+                if (save) SaveData();
             }
         }
         #endregion
