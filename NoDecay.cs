@@ -30,7 +30,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.60", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.61", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -46,7 +46,7 @@ namespace Oxide.Plugins
         private Dictionary<string, long> lastConnected = new Dictionary<string, long>();
 
         [PluginReference]
-        private readonly Plugin JPipes;//, MyMiniCopter;
+        private readonly Plugin JPipes;
 
         void Init()
         {
@@ -121,25 +121,6 @@ namespace Oxide.Plugins
         private void SaveData()
         {
             Interface.Oxide.DataFileSystem.WriteObject(Name + "/lastconnected", lastConnected);
-        }
-        // Workaround for car chassis that won't die
-        private void OnEntityDeath(ModularCar car, HitInfo hitinfo)
-        {
-#if DEBUG
-            Puts("Car died!  Checking for associated parts...");
-#endif
-            List<BaseEntity> ents = new List<BaseEntity>();
-            Vis.Entities(car.transform.position, 1f, ents);
-            foreach(var ent in ents)
-            {
-                if(ent.name.Contains("module_car_spawned") && !ent.IsDestroyed)
-                {
-#if DEBUG
-                    Puts($"Killing {ent.ShortPrefabName}");
-#endif
-                    ent.Kill(BaseNetworkable.DestroyMode.Gib);
-                }
-            }
         }
 
         object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitInfo)
@@ -304,7 +285,7 @@ namespace Oxide.Plugins
                 }
                 else if (entity_name.Equals("minicopter.entity"))
                 {
-                    //if (MyMiniCopter) return null;
+                    if (entity.OwnerID != 0) return null; // Skip owned copters covered by other plugins.
                     damageAmount = before * configData.Multipliers.minicopterMultiplier;
                     mundane = true;
                 }
@@ -373,6 +354,26 @@ namespace Oxide.Plugins
             {
                 double ms = (DateTime.Now - tick).TotalMilliseconds;
                 if(ms > configData.Global.warningTime || configData.Debug.outputMundane) Puts($"NoDecay.OnEntityTakeDamage on {entity_name} took {ms} ms to execute.");
+            }
+        }
+
+        // Workaround for car chassis that won't die
+        private void OnEntityDeath(ModularCar car, HitInfo hitinfo)
+        {
+#if DEBUG
+            Puts("Car died!  Checking for associated parts...");
+#endif
+            List<BaseEntity> ents = new List<BaseEntity>();
+            Vis.Entities(car.transform.position, 1f, ents);
+            foreach(var ent in ents)
+            {
+                if(ent.name.Contains("module_car_spawned") && !ent.IsDestroyed)
+                {
+#if DEBUG
+                    Puts($"Killing {ent.ShortPrefabName}");
+#endif
+                    ent.Kill(BaseNetworkable.DestroyMode.Gib);
+                }
             }
         }
 
