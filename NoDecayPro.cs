@@ -18,6 +18,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #endregion License
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using Oxide.Core;
@@ -28,11 +29,18 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay Pro", "RFC1920", "1.0.2")]
+    [Info("NoDecay Pro", "RFC1920", "1.0.3")]
     [Description("Scales or disables decay of items with decay.upkeep disabled globally.")]
     class NoDecayPro : RustPlugin
     {
+        #region Message
+        private string Lang(string key, string id = null, params object[] args) => string.Format(lang.GetMessage(key, this, id), args);
+        private void Message(IPlayer player, string key, params object[] args) => player.Message(Lang(key, player.Id, args));
+        private void LMessage(IPlayer player, string key, params object[] args) => player.Reply(Lang(key, player.Id, args));
+        #endregion
+
         #region main
+        private DecayProcess process;
         private Dictionary<string, long> lastConnected = new Dictionary<string, long>();
         private Dictionary<string, List<string>> entityinfo = new Dictionary<string, List<string>>();
 
@@ -52,47 +60,29 @@ namespace Oxide.Plugins
             if (entityinfo.Count == 0) UpdateEnts();
         }
 
+        protected override void LoadDefaultMessages()
+        {
+            lang.RegisterMessages(new Dictionary<string, string>
+            {
+                ["notauthorized"] = "You don't have permission to use this command.",
+                ["cleanedobject"] = "Cleaned up {0} for NoDecay",
+                ["addedobject"] = "Enabled {0} for NoDecay"
+            }, this);
+        }
+
         void Loaded()
         {
             LoadConfigValues();
             ConsoleSystem.Run(ConsoleSystem.Option.Server.Quiet(), "decay.upkeep 0");
 
-            var ents = UnityEngine.Object.FindObjectsOfType<BaseEntity>();
-            foreach(var ent in ents)
-            {
-                if (ent.OwnerID == 0) continue;
-                var gd = ent.GetComponentInChildren<GlobalDecay>();
-                OutputRcon($"Restarting GlobalDecay object for {ent.name}");
-                try
-                {
-                    UnityEngine.Object.Destroy(gd);
-                    var obj = ent.gameObject.AddComponent<GlobalDecay>();
-                }
-                catch { }
-            }
+            process = new DecayProcess();
+            process.Awake();
         }
 
         void Unload()
         {
+            ServerMgr.Instance.StopAllCoroutines();
             ConsoleSystem.Run(ConsoleSystem.Option.Server.Quiet(), "decay.upkeep 1");
-
-            var ents = UnityEngine.Object.FindObjectsOfType<BaseEntity>();
-            foreach(var ent in ents)
-            {
-                if (ent.OwnerID == 0) continue;
-                var gd = ent.GetComponentInChildren<GlobalDecay>();
-                try
-                {
-                    gd.enabled = false;
-                }
-                catch { }
-            }
-        }
-
-        void OnEntitySpawned(BaseEntity entity)
-        {
-            if (entity.OwnerID == 0) return;
-            var obj = entity.gameObject.AddComponent<GlobalDecay>();
         }
 
         private void OnEntitySaved(BuildingPrivlidge buildingPrivilege, BaseNetworkable.SaveInfo saveInfo)
@@ -150,6 +140,7 @@ namespace Oxide.Plugins
         {
             UpdateEnts();
         }
+
         private void UpdateEnts()
         {
             entityinfo["balloon"] = new List<string>();
@@ -477,18 +468,22 @@ namespace Oxide.Plugins
             if (!permission.UserHasPermission(player.UserIDString, "nodecaypro.admin")) return;
             if(args.Length > 0)
             {
-                if(args[0] == "enable")
+                if (args[0] == "enable")
                 {
                     enabled = !enabled;
                     SendReply(player, $"NoDecayPro enabled set to {enabled.ToString()}");
                 }
-                else if(args[0] == "log" || args[0] == "debug")
+                else if (args[0] == "log" || args[0] == "debug")
                 {
                     configData.Debug.outputToRcon = !configData.Debug.outputToRcon;
                     SendReply(player, $"Debug logging set to {configData.Debug.outputToRcon.ToString()}");
                     SaveConfig();
                 }
-                else if(args[0] == "info")
+                else if (args[0] == "update")
+                {
+                    UpdateEnts();
+                }
+                else if (args[0] == "info")
                 {
                     string info = "NoDecayPro current settings";
                     info += "\n\tentityCupboardMultiplier: " + configData.Multipliers["entityCupboard"].ToString();
@@ -582,11 +577,11 @@ namespace Oxide.Plugins
             {
                 if (!mundane)
                 {
-                    Interface.Oxide.LogDebug($"{message}");
+                    Puts($"{message}");
                 }
                 else if (mundane && configData.Debug.outputMundane)
                 {
-                    Interface.Oxide.LogDebug($"{message}");
+                    Puts($"{message}");
                 }
             }
         }
@@ -599,7 +594,7 @@ namespace Oxide.Plugins
             public Global Global = new Global();
             public VersionNumber Version;
 
-            public Dictionary<string, float> Multipliers;
+            public SortedDictionary<string, float> Multipliers;
 //            public List<string> blocks = new List<string>() { "twig", "wood", "stone", "sheet", "armored" };
         }
 
@@ -628,6 +623,8 @@ namespace Oxide.Plugins
             public bool protectVehicleOnLift = true;
             public float protectedDisplayTime = 4400;
             public double warningTime = 10;
+
+            public bool useNicerReload = true;
         }
 
         protected override void LoadDefaultConfig()
@@ -636,7 +633,7 @@ namespace Oxide.Plugins
             configData = new ConfigData
             {
                 Version = Version,
-                Multipliers = new Dictionary<string, float>()
+                Multipliers = new SortedDictionary<string, float>()
                 {
                     { "entityCupboard", 0f },
                     { "twig", 1.0f },
@@ -681,86 +678,87 @@ namespace Oxide.Plugins
         }
         #endregion
 
-        class GlobalDecay : MonoBehaviour
+        // Decay scheduler
+        class DecayProcess : BaseCombatEntity
         {
-            private BaseCombatEntity entity;
             private HitInfo hitinfo;
-            private bool enable = true;
 
-            public void Start()
-            {
-                useGUILayout = false;
-            }
             public void Awake()
             {
-                entity = GetComponentInParent<BaseCombatEntity>();
-                if (entity == null) return;
-                if (entity.OwnerID == 0) return;
-                hitinfo = new HitInfo();
-                hitinfo.damageTypes = new DamageTypeList();
+                hitinfo = new HitInfo
+                {
+                    damageTypes = new DamageTypeList()
+                };
                 hitinfo.damageTypes.Add(DamageType.Decay, 1f);
-                InvokeRepeating("ProcessDecay", 0, Instance.configData.Global.decaytick);
+
+                ServerMgr.Instance.StartCoroutine(ProcessDecay());
             }
 
             public void OnDisable()
             {
-                Instance.OutputRcon($"Killing GlobalDecay object for {entity.name}");
-                CancelInvoke("ProcessDecay");
-                Destroy(this);
+                ServerMgr.Instance.StopAllCoroutines();
             }
 
-            void ProcessDecay()
+            private IEnumerator ProcessDecay()
             {
-                if (entity == null) return;
+                yield return new WaitForSeconds(Instance.configData.Global.decaytick);
 
-                float damageAmount = 0f;
-                DateTime tick = DateTime.Now;
-                string entity_name = entity.LookupPrefab().name;
-                Instance.OutputRcon($"ProcessDecay called for {entity_name}");
+                var bce = UnityEngine.Object.FindObjectsOfType<BaseCombatEntity>();
+                if (bce == null) yield return null;
 
-                Instance.OutputRcon($"Processing decay for {entity_name}...");
-
-                string owner = entity.OwnerID.ToString();
-                bool mundane = false;
-                bool isBlock = false;
-
-                if (Instance.configData.Global.usePermission)
+                Instance.OutputRcon("GlobalDecay coroutine start");
+                foreach (var entity in bce)
                 {
-                    if (Instance.permission.UserHasPermission(owner, "nodecaypro.use") || owner == "0")
+                    string entity_name = null;
+                    try
                     {
-                        if (owner != "0")
-                        {
-                            Instance.OutputRcon($"{entity_name} owner {owner} has NoDecayPro permission!");
-                        }
+                        entity_name = entity.LookupPrefab().name;
                     }
-                    else
+                    catch { }
+                    if (entity_name == null) break;
+                    string owner = entity.OwnerID.ToString();
+                    float damageAmount = 0f;
+                    bool mundane = false;
+                    bool isBlock = false;
+                    bool usePerm = Instance.configData.Global.usePermission;
+
+                    Instance.OutputRcon($"Working on entity: {entity_name}, owner={owner.ToString()}");
+
+                    if (Instance.configData.Global.usePermission)
                     {
-                        Instance.OutputRcon($"{entity_name} owner {owner} does NOT have NoDecayPro permission.  Standard decay in effect.");
-                        return;
-                    }
-                }
-                if (Instance.configData.Global.protectedDays > 0 && entity.OwnerID > 0)
-                {
-                    long lc = 0;
-                    Instance.lastConnected.TryGetValue(entity.OwnerID.ToString(), out lc);
-                    if (lc > 0)
-                    {
-                        long now = Instance.ToEpochTime(DateTime.UtcNow);
-                        float days = Math.Abs((now - lc) / 86400);
-                        if (days > Instance.configData.Global.protectedDays)
+                        if (Instance.permission.UserHasPermission(owner, "nodecaypro.use") || owner == "0")
                         {
-                            Instance.OutputRcon($"Allowing decay for owner offline for {Instance.configData.Global.protectedDays.ToString()} days");
-                            return;
+                            if (owner != "0")
+                            {
+                                Instance.OutputRcon($"{entity_name} owner {owner} has NoDecayPro permission!");
+                            }
                         }
                         else
                         {
-                            Instance.OutputRcon($"Owner was last connected {days.ToString()} days ago and is still protected...");
+                            Instance.OutputRcon($"{entity_name} owner {owner} does NOT have NoDecayPro permission.  Standard decay in effect.");
+                            continue;
                         }
                     }
-                }
+                    if (Instance.configData.Global.protectedDays > 0 && entity.OwnerID > 0)
+                    {
+                        long lc = 0;
+                        Instance.lastConnected.TryGetValue(entity.OwnerID.ToString(), out lc);
+                        if (lc > 0)
+                        {
+                            long now = Instance.ToEpochTime(DateTime.UtcNow);
+                            float days = Math.Abs((now - lc) / 86400);
+                            if (days > Instance.configData.Global.protectedDays)
+                            {
+                                Instance.OutputRcon($"Allowing decay for owner offline for {Instance.configData.Global.protectedDays.ToString()} days");
+                                continue;
+                            }
+                            else
+                            {
+                                Instance.OutputRcon($"Owner was last connected {days.ToString()} days ago and is still protected...");
+                            }
+                        }
+                    }
 
-                try
-                {
                     float before = hitinfo.damageTypes.Get(DamageType.Decay);
 
                     if (entity is BuildingBlock)
@@ -773,7 +771,7 @@ namespace Oxide.Plugins
                                 {
                                     Instance.OutputRcon("Found a JPipe with nodecay enabled");
                                     hitinfo.damageTypes.Scale(DamageType.Decay, 0f);
-                                    return;
+                                    break;
                                 }
                             }
                         }
@@ -787,7 +785,7 @@ namespace Oxide.Plugins
                         var garage = entity.GetComponentInParent<ModularCarGarage>();
                         if (garage != null && Instance.configData.Global.protectVehicleOnLift)
                         {
-                            return;
+                            break;
                         }
                     }
                     else
@@ -795,9 +793,14 @@ namespace Oxide.Plugins
                         // Main check for non-building entities/deployables
                         foreach (KeyValuePair<string, List<string>> entities in Instance.entityinfo)
                         {
-                            if(entities.Value.Contains(entity_name))
+                            if (entities.Value.Contains(entity_name))
                             {
-                                damageAmount = before * Instance.configData.Multipliers[entities.Key];
+                                try
+                                {
+                                    damageAmount = before * Instance.configData.Multipliers[entities.Key];
+                                    break;
+                                }
+                                catch { }
                             }
                         }
                     }
@@ -815,23 +818,20 @@ namespace Oxide.Plugins
                         }
                     }
 
-                    Instance.OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
-                    entity.health -= damageAmount;
-                    if (entity.health == 0 && Instance.configData.Global.DestroyOnZero)
+                    Instance.NextTick(() =>
                     {
-                        Instance.OutputRcon($"Entity {entity_name} completely decayed - destroying!", mundane);
-                        if (entity == null) return;
-                        entity.Kill(BaseNetworkable.DestroyMode.Gib);
-                    }
+                        Instance.OutputRcon($"Decay ({entity_name}) before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
+                        entity.health -= damageAmount;
+                        if (entity.health == 0 && Instance.configData.Global.DestroyOnZero)
+                        {
+                            Instance.OutputRcon($"Entity {entity_name} completely decayed - destroying!", mundane);
+                            if (entity != null) entity.Kill(DestroyMode.Gib);
+                        }
+                    });
                 }
-                finally
-                {
-                    double ms = (DateTime.Now - tick).TotalMilliseconds;
-                    if (ms > Instance.configData.Global.warningTime || Instance.configData.Debug.outputMundane)
-                    {
-                        Interface.Oxide.LogWarning($"NoDecay.OnEntityTakeDamage on {entity_name} took {ms} ms to execute.");
-                    }
-                }
+
+                // Start again
+                ServerMgr.Instance.StartCoroutine(ProcessDecay());
             }
         }
     }
