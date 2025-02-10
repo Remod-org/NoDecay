@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.46", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.47", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     // Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -36,6 +36,7 @@ namespace Oxide.Plugins
             string entity_name = entity.LookupPrefab().name;
             string owner = entity.OwnerID.ToString();
             bool mundane = false;
+            bool isBlock = false;
 
             if(configData.Global.usePermission)
             {
@@ -60,6 +61,7 @@ namespace Oxide.Plugins
                 if(entity is BuildingBlock)
                 {
                     damageAmount = ProcessBuildingDamage(entity, before);
+                    isBlock = true;
                 }
                 else if(entity_name == "campfire" || entity_name == "skull_fire_pit")
                 {
@@ -91,23 +93,7 @@ namespace Oxide.Plugins
                      entity_name.Contains("composter") ||
                      entity_name.Contains("Graveyard"))
                 {
-                     if (configData.Global.requireCupboard && configData.Global.cupboardCheckEntity)
-                     {
-                         // Verify that we should check for a cupboard and ensure that one exists.
-                         // If not, multiplier will be standard of 1.0f.
-                         OutputRcon($"NoDecay checking for local cupboard.");
-
-                         if (CheckCupboardEntity(entity))
-                         {
-                             damageAmount = before * configData.Multipliers.deployablesMultiplier;
-                         }
-                     }
-                     else
-                     {
-                         damageAmount = before * configData.Multipliers.deployablesMultiplier;
-                     }
-
-                    OutputRcon($"Decay({entity_name}) before: {before} after: {damageAmount}");
+                    damageAmount = before * configData.Multipliers.deployablesMultiplier;
                 }
                 else if(entity_name.Contains("furnace"))
                 {
@@ -186,6 +172,19 @@ namespace Oxide.Plugins
                 {
                     Puts($"Unsupported decaying entity detected: {entity_name} --- please notify author.");
                     return null;
+                }
+
+                // Check non-building entities for cupboard in range
+                if (configData.Global.requireCupboard && configData.Global.cupboardCheckEntity && !isBlock)
+                {
+                    // Verify that we should check for a cupboard and ensure that one exists.
+                    // If so, multiplier will be set to entityCupboardMultiplier.
+                    OutputRcon($"NoDecay checking for local cupboard.", mundane);
+
+                    if (CheckCupboardEntity(entity, mundane))
+                    {
+                        damageAmount = before * configData.Multipliers.entityCupboardMultiplier;
+                    }
                 }
 
                 NextTick(() =>
@@ -321,22 +320,22 @@ namespace Oxide.Plugins
         }
 
         // Non-block entity check
-        bool CheckCupboardEntity(BaseEntity entity)
+        bool CheckCupboardEntity(BaseEntity entity, bool mundane = false)
         {
             int targetLayer = LayerMask.GetMask("Construction", "Construction Trigger", "Trigger", "Deployed");
             List<BuildingPrivlidge> cups = new List<BuildingPrivlidge>();
             Vis.Entities<BuildingPrivlidge>(entity.transform.position, configData.Global.cupboardRange, cups, targetLayer);
 
-            OutputRcon($"CheckCupboardEntity:   Checking for cupboard within {configData.Global.cupboardRange.ToString()}m of {entity.ShortPrefabName}.");
+            OutputRcon($"CheckCupboardEntity:   Checking for cupboard within {configData.Global.cupboardRange.ToString()}m of {entity.ShortPrefabName}.", mundane);
 
             if(cups.Count > 0)
             {
                 // cupboard overlap.  Entity safe from decay.
-                OutputRcon($"CheckCupboardEntity:     Found entity layer in range of cupboard!");
+                OutputRcon($"CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
                 return true;
             }
 
-            OutputRcon($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.");
+            OutputRcon($"CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
             return false;
         }
 
@@ -515,6 +514,7 @@ namespace Oxide.Plugins
 
         private class Multipliers
         {
+            public float entityCupboardMultiplier = 0f;
             public float twigMultiplier = 1.0f;
             public float woodMultiplier = 0f;
             public float stoneMultiplier = 0f;
@@ -549,6 +549,10 @@ namespace Oxide.Plugins
                 Puts("Upgrading config file...");
                 configData.Multipliers = configData.Mutipliers;
                 configData.Mutipliers = null;
+            }
+            if (configData.Version < new VersionNumber(1, 0, 47))
+            {
+                configData.Multipliers.entityCupboardMultiplier = 0f;
             }
             configData.Version = Version;
 

@@ -32,6 +32,7 @@ NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46. 
     "DestroyOnZero": true
   },
   "Multipliers": {
+    "entityCupboardMultiplier": 0.0,
     "twigMultiplier": 1.0,
     "woodMultiplier": 0.0,
     "sheetMultiplier": 0.0,
@@ -87,8 +88,9 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
  Set cupboardCheckEntity to also check for entities in range of cupboards (i.e. not just foundations, etc.  This should work on doors and high walls, etc.
 
  Set cupboardRange to a desired value for the cupboardCheckEntity range.  If too high, may affect other user's stuff.  If set too low it may not protect external items if out of range.
+ Use "entityCupboardMultiplier" to set the amount of decay for entities in cupboard range.
  
- Set DestroyOnZero to true to enable destroying entities when health is zero.  This is most likely needed due to a bug in the Feb 2020 Rust.
+ Set DestroyOnZero to true to enable destroying entities when health is zero.
 
 #### A Few Notes About Multipliers, decay.tick, etc.
    For any config file multiplier, you can set to 0 to disable decay for that item, 1 for normal decay, or a higher number for faster decay.  In other words, anything below 1 is slower down to 0 which is no decay.  Anything above 1 increases the rate of decay for that item and, yes, you can set numbers higher than 1.
