@@ -14,7 +14,7 @@ OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-#endregion License Information (MIT)
+#endregion License Information (MIT)
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -25,7 +25,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.48", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.50", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -205,7 +205,7 @@ namespace Oxide.Plugins
                     damageAmount = before * configData.Multipliers.scrapcopterMultiplier;
                     mundane = true;
                 }
-                else if(entity_name == "BaseVehicle")
+                else if(entity_name == "BaseVehicle" || entity.name.Contains("1module_") || entity.name.Contains("2module_") || entity.name.Contains("3module_") || entity.name.Contains("4module_"))
                 {
                     damageAmount = before * configData.Multipliers.vehicleMultiplier;
                     mundane = true;
