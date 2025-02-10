@@ -219,6 +219,7 @@ namespace Oxide.Plugins
                      entity_name.Contains("fog") ||  entity_name.Contains("Fog") ||
                      entity_name.Equals("wall.frame.shopfront.metal.static") || entity_name.Equals("wall.frame.shopfront") ||
                      entity_name.Equals("wall.window.bars.metal") || entity_name.Equals("candle") ||
+                     entity_name.Equals("SmallCandleSet") || entity_name.Equals("LargeCandleSet") ||
                      entity_name.Equals("hatchet.entity") || entity_name.Equals("stonehatchet.entity") ||
                      entity_name.Equals("door.hinged.garage_a"))
                 {
