@@ -27,10 +27,9 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.65", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.66", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
-    //Thanks to Steenamaroo for his help and support
     [Description("Scales or disables decay of items")]
     class NoDecay : RustPlugin
     {
@@ -44,8 +43,15 @@ namespace Oxide.Plugins
         [PluginReference]
         private readonly Plugin JPipes;
 
+        #region Message
+        private string Lang(string key, string id = null, params object[] args) => string.Format(lang.GetMessage(key, this, id), args);
+        private void Message(IPlayer player, string key, params object[] args) => player.Message(Lang(key, player.Id, args));
+        private void LMessage(IPlayer player, string key, params object[] args) => player.Reply(Lang(key, player.Id, args));
+        #endregion
+
         void Init()
         {
+            AddCovalenceCommand("nodecay", "CmdInfo");
             permission.RegisterPermission("nodecay.use", this);
             permission.RegisterPermission("nodecay.admin", this);
             LoadData();
@@ -60,7 +66,7 @@ namespace Oxide.Plugins
             {
                 if (configData.Global.usePermission)
                 {
-                    var owner = buildingPrivilege.OwnerID.ToString();
+                    string owner = buildingPrivilege.OwnerID.ToString();
                     if (permission.UserHasPermission(owner, "nodecay.use") || owner == "0")
                     {
                         if (owner != "0")
@@ -107,6 +113,7 @@ namespace Oxide.Plugins
 
         object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitInfo)
         {
+//            Puts(entity.name);
             if (!enabled) return null;
             if (entity == null || hitInfo == null) return null;
             if (!hitInfo.damageTypes.Has(Rust.DamageType.Decay)) return null;
@@ -114,7 +121,7 @@ namespace Oxide.Plugins
             float damageAmount = 0f;
             DateTime tick = DateTime.Now;
             string entity_name = entity.LookupPrefab().name;
-//            Puts($"Decay Entity: {entity_name}");
+            //Puts($"Decay Entity: {entity_name}");
             string owner = entity.OwnerID.ToString();
             bool mundane = false;
             bool isBlock = false;
@@ -178,7 +185,7 @@ namespace Oxide.Plugins
                 }
                 else if (entity is ModularCar)
                 {
-                    var garage = entity.GetComponentInParent<ModularCarGarage>();
+                    ModularCarGarage garage = entity.GetComponentInParent<ModularCarGarage>();
                     if (garage != null && configData.Global.protectVehicleOnLift)
                     {
                         return null;
@@ -241,7 +248,7 @@ namespace Oxide.Plugins
             OutputRcon("Car died!  Checking for associated parts...");
             List<BaseEntity> ents = new List<BaseEntity>();
             Vis.Entities(car.transform.position, 1f, ents);
-            foreach(var ent in ents)
+            foreach (BaseEntity ent in ents)
             {
                 if (ent.name.Contains("module_car_spawned") && !ent.IsDestroyed)
                 {
@@ -279,7 +286,7 @@ namespace Oxide.Plugins
             entityinfo["mining"] = new List<string>();
 
             List<string> names = new List<string>();
-            foreach (var ent in Resources.FindObjectsOfTypeAll<BaseCombatEntity>())
+            foreach (BaseCombatEntity ent in Resources.FindObjectsOfTypeAll<BaseCombatEntity>())
             {
                 string entity_name = ent.ShortPrefabName.ToLower();
                 if (entity_name == "cupboard.tool.deployed") continue;
@@ -357,7 +364,7 @@ namespace Oxide.Plugins
                 {
                     entityinfo["mining"].Add(entity_name);
                 }
-                else if (entity_name.Contains("rowboat") || entity_name.Contains("rhib") || entity_name.Contains("kayak"))
+                else if (entity_name.Contains("rowboat") || entity_name.Contains("rhib") || entity_name.Contains("kayak") || entity_name.Contains("submarine"))
                 {
                     entityinfo["boat"].Add(entity_name);
                 }
@@ -386,10 +393,9 @@ namespace Oxide.Plugins
             SaveData();
         }
 
-
         private float ProcessBuildingDamage(BaseEntity entity, float before)
         {
-            var block = entity as BuildingBlock;
+            BuildingBlock block = entity as BuildingBlock;
             float multiplier = 1.0f;
             float damageAmount = 1.0f;
             bool isHighWall = block.LookupPrefab().name.Contains("wall.external");
@@ -552,7 +558,7 @@ namespace Oxide.Plugins
 
             try
             {
-                var cup = container.entityOwner as BaseEntity;
+                BaseEntity cup = container.entityOwner as BaseEntity;
                 if (!cup.name.Contains("cupboard.tool")) return null;
 
                 string res = item?.info?.shortname;
@@ -581,21 +587,21 @@ namespace Oxide.Plugins
         #endregion
 
         #region command
-        [ChatCommand("nodecay")]
-        void CmdInfo(BasePlayer player, string command, string[] args)
+        [Command("nodecay")]
+        void CmdInfo(IPlayer iplayer, string command, string[] args)
         {
-            if (!permission.UserHasPermission(player.UserIDString, "nodecay.admin")) return;
+            if (!permission.UserHasPermission(iplayer.Id, "nodecay.admin")) return;
             if (args.Length > 0)
             {
                 if (args[0] == "enable")
                 {
                     enabled = !enabled;
-                    SendReply(player, $"NoDecay enabled set to {enabled.ToString()}");
+                    Message(iplayer, $"NoDecay enabled set to {enabled.ToString()}");
                 }
                 else if (args[0] == "log")
                 {
                     configData.Debug.outputToRcon = !configData.Debug.outputToRcon;
-                    SendReply(player, $"Debug logging set to {configData.Debug.outputToRcon.ToString()}");
+                    Message(iplayer, $"Debug logging set to {configData.Debug.outputToRcon.ToString()}");
                 }
                 else if (args[0] == "update")
                 {
@@ -643,7 +649,7 @@ namespace Oxide.Plugins
                     info += "\n\tblockCupboardMetal: " + configData.Global.blockCupboardMetal.ToString();
                     info += "\n\tblockCupboardArmor: " + configData.Global.blockCupboardArmor.ToString();
 
-                    SendReply(player, info);
+                    Message(iplayer, info);
                     info = null;
                 }
             }
@@ -654,9 +660,9 @@ namespace Oxide.Plugins
         // From PlayerDatabase
         private long ToEpochTime(DateTime dateTime)
         {
-            var date = dateTime.ToUniversalTime();
-            var ticks = date.Ticks - new DateTime(1970, 1, 1, 0, 0, 0, 0).Ticks;
-            var ts = ticks / TimeSpan.TicksPerSecond;
+            DateTime date = dateTime.ToUniversalTime();
+            long ticks = date.Ticks - new DateTime(1970, 1, 1, 0, 0, 0, 0).Ticks;
+            long ts = ticks / TimeSpan.TicksPerSecond;
             return ts;
         }
 
