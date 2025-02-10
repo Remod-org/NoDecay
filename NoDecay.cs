@@ -18,20 +18,20 @@
     Optionally you can also view the license at <http://www.gnu.org/licenses/>.
 */
 #endregion License (GPL v2)
+using Oxide.Core;
+using Oxide.Core.Libraries.Covalence;
+using Oxide.Core.Plugins;
+using Oxide.Game.Rust.Cui;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using Oxide.Core;
-using Oxide.Core.Libraries.Covalence;
-using Oxide.Core.Plugins;
-using Oxide.Game.Rust.Cui;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.89", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.90", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -547,7 +547,8 @@ namespace Oxide.Plugins
                          entity_name.Contains("cell") || entity_name.Contains("fence") ||
                          entity_name.Contains("reinforced") || entity_name.Contains("composter") ||
                          entity_name.Contains("workbench") || entity_name.Contains("shopfront") ||
-                         entity_name.Contains("grill") || entity_name.Contains("wall.window.bars"))
+                         entity_name.Contains("grill") || entity_name.Contains("wall.window.bars") ||
+                         entity_name.Contains("wallpaper"))
                 {
                     entityinfo["building"].Add(entity_name);
                 }
@@ -992,7 +993,7 @@ namespace Oxide.Plugins
         #region inbound_hooks
         // Returns player status if playerid > 0
         // Returns global enabled status if playerid == 0
-        private bool NoDecayGet(ulong playerid=0)
+        private bool NoDecayGet(ulong playerid = 0)
         {
             if (playerid > 0)
             {
@@ -1004,7 +1005,7 @@ namespace Oxide.Plugins
 
         // Sets player status if playerid > 0
         // Sets global status if playerid == 0
-        private object NoDecaySet(ulong playerid=0, bool status=true)
+        private object NoDecaySet(ulong playerid = 0, bool status = true)
         {
             if (playerid > 0)
             {
@@ -1071,7 +1072,7 @@ namespace Oxide.Plugins
         {
             if (GridAPI != null)
             {
-                string[] g = (string[]) GridAPI.CallHook("GetGrid", position);
+                string[] g = (string[])GridAPI.CallHook("GetGrid", position);
                 return string.Concat(g);
             }
             else
@@ -1314,7 +1315,7 @@ namespace Oxide.Plugins
                 panel);
             }
 
-            public static void Button(ref CuiElementContainer container, string panel, string color, string text, int size, string min, string max, string command, TextAnchor align = TextAnchor.MiddleCenter, string tcolor="FFFFFF")
+            public static void Button(ref CuiElementContainer container, string panel, string color, string text, int size, string min, string max, string command, TextAnchor align = TextAnchor.MiddleCenter, string tcolor = "FFFFFF")
             {
                 container.Add(new CuiButton
                 {
