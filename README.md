@@ -17,6 +17,9 @@ The default configuration does **NOT** affect *Twig decay* but nullifies all dam
 
 <b>NOTE: The long-standing misspelling of Multipliers was fixed as of 1.0.46.  As of 1.0.86, Multipliers has been removed as well.  Only multipliers was actually in use since 1.0.63 but due to having the leave that upgrade in place, Multipliers was also still there.  Sorry for the confusion.</b>
 
+New for 1.0.87 - non building block building part such as doorways and doors, etc., now use the new building multiplier, which defaults to 0.  Previously, they were classified as deployables and were decaying at 10% by default.
+
+
 ```json
 {
   "Debug": {
