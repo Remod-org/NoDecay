@@ -28,7 +28,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.52", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.53", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -102,7 +102,7 @@ namespace Oxide.Plugins
             {
                 float before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
 
-                if(entity is BuildingBlock)
+                if (entity is BuildingBlock)
                 {
                     if (configData.Global.useJPipes)
                     {
@@ -120,17 +120,17 @@ namespace Oxide.Plugins
                     damageAmount = ProcessBuildingDamage(entity, before);
                     isBlock = true;
                 }
-                else if(entity_name == "campfire" || entity_name == "skull_fire_pit")
+                else if (entity_name == "campfire" || entity_name == "skull_fire_pit")
                 {
                     damageAmount = before * configData.Multipliers.campfireMultiplier;
                 }
-                else if(entity_name == "box.wooden.large" ||
+                else if (entity_name == "box.wooden.large" ||
                      entity_name == "woodbox_deployed" ||
                      entity_name == "CoffinStorage")
                 {
                     damageAmount = before * configData.Multipliers.boxMultiplier;
                 }
-                else if(entity_name.Contains("deployed") ||
+                else if (entity_name.Contains("deployed") ||
                      entity_name.Contains("reinforced") ||
                      entity_name.Contains("shopfront") ||
                      entity_name.Contains("bars") ||
@@ -152,81 +152,81 @@ namespace Oxide.Plugins
                 {
                     damageAmount = before * configData.Multipliers.deployablesMultiplier;
                 }
-                else if(entity_name.Contains("furnace"))
+                else if (entity_name.Contains("furnace"))
                 {
                     damageAmount = before * configData.Multipliers.furnaceMultiplier;
                 }
-                else if(entity_name.Contains("sedan"))
+                else if (entity_name.Contains("sedan"))
                 {
                     damageAmount = before * configData.Multipliers.sedanMultiplier;
                 }
-                else if(entity_name == "SAM_Static")
+                else if (entity_name == "SAM_Static")
                 {
                     damageAmount = before * configData.Multipliers.samMultiplier;
                 }
-                else if(entity_name == "HotAirBalloon")
+                else if (entity_name == "HotAirBalloon")
                 {
                     damageAmount = before * configData.Multipliers.baloonMultiplier;
                     mundane = true;
                 }
-                else if(entity_name == "BBQ.Deployed")
+                else if (entity_name == "BBQ.Deployed")
                 {
                     damageAmount = before * configData.Multipliers.bbqMultiplier;
                 }
-                else if(entity_name.Contains("watchtower"))
+                else if (entity_name.Contains("watchtower"))
                 {
                     damageAmount = before * configData.Multipliers.watchtowerMultiplier;
                 }
-                else if(entity_name == "WaterBarrel" ||
+                else if (entity_name == "WaterBarrel" ||
                         entity_name.Contains("jackolantern") ||
                         entity_name.Contains("water_catcher"))
                 {
                     damageAmount = before * configData.Multipliers.deployablesMultiplier;
                 }
-                else if(entity_name == "beartrap" ||
+                else if (entity_name == "beartrap" ||
                         entity_name == "landmine" ||
                         entity_name == "spikes.floor")
                 {
                     damageAmount = before * configData.Multipliers.trapMultiplier;
                 }
-                else if(entity_name.Contains("barricade"))
+                else if (entity_name.Contains("barricade"))
                 {
                     damageAmount = before * configData.Multipliers.barricadeMultiplier;
                 }
-                else if(entity_name == "gates.external.high.stone" || entity_name == "wall.external.high.stone")
+                else if (entity_name == "gates.external.high.stone" || entity_name == "wall.external.high.stone")
                 {
                     damageAmount = before * configData.Multipliers.highStoneWallMultiplier;
                 }
-                else if(entity_name == "gates.external.high.wood" || entity_name == "wall.external.high.wood")
+                else if (entity_name == "gates.external.high.wood" || entity_name == "wall.external.high.wood")
                 {
                     damageAmount = before * configData.Multipliers.highWoodWallMultiplier;
                 }
-                else if(entity_name == "mining.pumpjack")
+                else if (entity_name == "mining.pumpjack")
                 {
                     damageAmount = 0.0f;
                 }
-                else if(entity_name == "Rowboat" || entity_name == "RHIB")
+                else if (entity_name == "Rowboat" || entity_name == "RHIB")
                 {
                     damageAmount = before * configData.Multipliers.boatMultiplier;
                     mundane = true;
                 }
-                else if(entity_name == "minicopter.entity")
+                else if (entity_name == "minicopter.entity")
                 {
                     //if (MyMiniCopter) return null;
                     damageAmount = before * configData.Multipliers.minicopterMultiplier;
                     mundane = true;
                 }
-                else if(entity_name.Contains("TestRidableHorse"))
+                else if (entity_name.Contains("TestRidableHorse"))
                 {
                     damageAmount = before * configData.Multipliers.horseMultiplier;
                     mundane = true;
                 }
-                else if(entity_name == "ScrapTransportHelicopter")
+                else if (entity_name == "ScrapTransportHelicopter")
                 {
                     damageAmount = before * configData.Multipliers.scrapcopterMultiplier;
                     mundane = true;
                 }
-                else if(entity_name == "BaseVehicle" ||
+                else if (entity_name == "BaseVehicle" ||
                     entity.name.Contains("vehicle.chassis") ||
                     entity.name.Contains("chassis_") ||
                     entity.name.Contains("1module_") ||
@@ -236,6 +236,14 @@ namespace Oxide.Plugins
                 {
                     damageAmount = before * configData.Multipliers.vehicleMultiplier;
                     mundane = true;
+                }
+                else if (entity is ModularCar)
+                {
+                    var garage = entity.GetComponentInParent<ModularCarGarage>();
+                    if (garage != null && configData.Global.protectVehicleOnLift)
+                    {
+                        return null;
+                    }
                 }
                 else
                 {
@@ -528,6 +536,7 @@ namespace Oxide.Plugins
 
                     info += "\n\n\tEnabled: " + enabled.ToString();
                     info += "\n\tdisableWarning: " + configData.Global.disableWarning.ToString();
+                    info += "\n\tprotectVehicleOnLift: " + configData.Global.protectVehicleOnLift.ToString();
                     info += "\n\tusePermission: " + configData.Global.usePermission.ToString();
                     info += "\n\trequireCupboard: " + configData.Global.requireCupboard.ToString();
                     info += "\n\tCupboardEntity: " + configData.Global.cupboardCheckEntity.ToString();
@@ -614,6 +623,7 @@ namespace Oxide.Plugins
             public bool blockCupboardMetal = false;
             public bool blockCupboardArmor = false;
             public bool disableWarning = true;
+            public bool protectVehicleOnLift = true;
         }
 
         private class Multipliers
@@ -666,6 +676,10 @@ namespace Oxide.Plugins
             if (configData.Version < new VersionNumber(1, 0, 51))
             {
                 configData.Global.useJPipes = false;
+            }
+            if (configData.Version < new VersionNumber(1, 0, 53))
+            {
+                configData.Global.protectVehicleOnLift = true;
             }
             configData.Version = Version;
 
