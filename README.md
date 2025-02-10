@@ -15,6 +15,8 @@ The default configuration does **NOT** affect *Twig decay* but nullifies all dam
 
 ### Configuration
 
+<b>NOTE: The long-standing misspelling of Multipliers was fixed as of 1.0.46.  As of 1.0.86, Multipliers has been removed as well.  Only multipliers was actually in use since 1.0.63 but due to having the leave that upgrade in place, Multipliers was also still there.  Sorry for the confusion.</b>
+
 ```json
 {
   "Debug": {
@@ -68,11 +70,10 @@ The default configuration does **NOT** affect *Twig decay* but nullifies all dam
     "trapMultiplier": 0.0,
     "watchtowerMultiplier": 0.0
   },
-  "Mutipliers": null,
   "Version": {
     "Major": 1,
     "Minor": 0,
-    "Patch": 83
+    "Patch": 86
   }
 }
 ```
