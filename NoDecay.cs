@@ -30,7 +30,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.76", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.77", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -331,7 +331,15 @@ namespace Oxide.Plugins
                 if (zonedata.Length > 0)
                 {
                     inzone = true;
-                    if (ZoneManager && configData.Global.honorZoneManagerFlag)
+                    bool skipCat = false;
+                    string cat = entityinfo.FirstOrDefault(y => y.Value.Contains(entity_name)).Key;
+                    if (configData.Global.overrideZoneManager.Count > 0 && configData.Global.overrideZoneManager.Contains(cat))
+                    {
+                        DoLog($"Skipping zone check for {entity_name} based on category {cat} exclusion.");
+                        skipCat = true;
+                    }
+
+                    if (ZoneManager && configData.Global.honorZoneManagerFlag && !skipCat)
                     {
                         foreach (string zoneId in zonedata)
                         {
@@ -579,7 +587,7 @@ namespace Oxide.Plugins
                 DoLog("NoDecay not checking for local cupboard.");
             }
 
-            switch(block.grade)
+            switch (block.grade)
             {
                 case BuildingGrade.Enum.Twigs:
                     if (hascup) multiplier = configData.multipliers["twig"];
@@ -1031,6 +1039,7 @@ namespace Oxide.Plugins
             public bool protectVehicleOnLift;
             public float protectedDisplayTime;
             public double warningTime;
+            public List<string> overrideZoneManager = new List<string>();
         }
 
         private class Multipliers
@@ -1077,7 +1086,8 @@ namespace Oxide.Plugins
                     disableWarning = true,
                     protectVehicleOnLift = true,
                     protectedDisplayTime = 4400,
-                    warningTime = 10
+                    warningTime = 10,
+                    overrideZoneManager = new List<string>() { "vehicle", "balloon" }
                 },
                 multipliers = new SortedDictionary<string, float>()
                 {
@@ -1157,6 +1167,10 @@ namespace Oxide.Plugins
             if (configData.Version < new VersionNumber(1, 0, 76))
             {
                 configData.Global.honorZoneManagerFlag = false;
+            }
+            if (configData.Version < new VersionNumber(1, 0, 77))
+            {
+                configData.Global.overrideZoneManager = new List<string>() { "vehicle", "balloon" };
             }
             configData.Version = Version;
 
