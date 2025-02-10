@@ -252,6 +252,7 @@ namespace Oxide.Plugins
                 }
                 else if (entity_name.Equals("WaterBarrel") ||
                         entity_name.Equals("jackolantern.angry") || entity_name.Equals("jackolantern.happy") ||
+                        entity_name.Equals("composter") || entity_name.Equals("Composter") ||
                         entity_name.Equals("water_catcher_small") || entity_name.Equals("water_catcher_large"))
                 {
                     damageAmount = before * configData.Multipliers.deployablesMultiplier;
