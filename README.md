@@ -11,6 +11,7 @@ For entities, use "cupboardCheckEntity: true" and "cupboardRange: number" to con
 Note, the default is cupboardCheckEntity: false, which will skip checking for cupboards in range of entities.  It will still check for blocks attached to cupboards, which should be more accurate.
 
 ### Configuration
+NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46.  Older configs should be upgraded automatically.
 
 ```json
 {
@@ -30,7 +31,11 @@ Note, the default is cupboardCheckEntity: false, which will skip checking for cu
     "usePermission": false,
     "DestroyOnZero": true
   },
-  "Mutipliers": {
+  "Multipliers": {
+    "twigMultiplier": 1.0,
+    "woodMultiplier": 0.0,
+    "sheetMultiplier": 0.0,
+    "stoneMultiplier": 0.0,
     "armoredMultiplier": 0.0,
     "baloonMultiplier": 0.0,
     "barricadesMultiplier": 0.0,
@@ -42,17 +47,19 @@ Note, the default is cupboardCheckEntity: false, which will skip checking for cu
     "furnaceMultiplier": 0.0,
     "highStoneWallMultiplier": 0.0,
     "highWoodWallMultiplier": 0.0,
+    "horseMultiplier": 0.0,
     "minicopterMultiplier": 0.0,
-    "scrapcopterMultiplier": 0.0,
     "samMultiplier": 0.0,
+    "scrapcopterMultiplier": 0.0,
     "sedanMultiplier": 0.0,
-    "sheetMultiplier": 0.0,
-    "stoneMultiplier": 0.0,
     "trapMultiplier": 0.0,
-    "twigMultiplier": 1.0,
-    "watchtowerMultiplier": 0.0,
-    "woodMultiplier": 0.0,
-    "horseMultiplier": 0.0
+    "watchtowerMultiplier": 0.0
+  },
+  "Mutipliers": null,
+  "Version": {
+    "Major": 1,
+    "Minor": 0,
+    "Patch": 46
   }
 }
 ```
@@ -82,6 +89,13 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
  Set cupboardRange to a desired value for the cupboardCheckEntity range.  If too high, may affect other user's stuff.  If set too low it may not protect external items if out of range.
  
  Set DestroyOnZero to true to enable destroying entities when health is zero.  This is most likely needed due to a bug in the Feb 2020 Rust.
+
+#### A Few Notes About Multipliers, decay.tick, etc.
+   For any config file multiplier, you can set to 0 to disable decay for that item, 1 for normal decay, or a higher number for faster decay.  In other words, anything below 1 is slower down to 0 which is no decay.  Anything above 1 increases the rate of decay for that item and, yes, you can set numbers higher than 1.
+
+   Decay is implemented by Rust based on the decay.tick value which defaults to 300 (5 minutes).  This specifies how often decay is processed on your server.
+
+   The warning from Rust about Building Decaying cannot be bypassed at this time except by stocking a TC with the appropriate materials.  If a player adds materials to his TC, NoDecay will be bypassed altogether for their building, and normal upkeep costs will apply.  There are server variables available to adjust cost and decay rates, but that is outside of the scope of what NoDecay is intended to do and may also affect its operation.
 
 ### Permissions
     - nodecay.use   -- Required for NoDecay to work for a user, if the usePermission flag is set to true.
