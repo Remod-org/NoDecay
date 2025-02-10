@@ -1,4 +1,3 @@
-//#define DEBUG
 #region License
 /*
 Copyright RFC1920 <desolationoutpostpve@gmail.com>
@@ -20,8 +19,6 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endregion License
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using System.Text;
 using Oxide.Core;
 using Oxide.Core.Libraries.Covalence;
@@ -30,7 +27,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.62", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.63", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -41,9 +38,8 @@ namespace Oxide.Plugins
         private bool enabled = true;
 
         #region main
-        public static readonly FieldInfo nextProtectedCalcTime = typeof(BuildingPrivlidge).GetField("nextProtectedCalcTime", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-        public static readonly FieldInfo cachedProtectedMinutes = typeof(BuildingPrivlidge).GetField("cachedProtectedMinutes", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
         private Dictionary<string, long> lastConnected = new Dictionary<string, long>();
+        private Dictionary<string, List<string>> entityinfo = new Dictionary<string, List<string>>();
 
         [PluginReference]
         private readonly Plugin JPipes;
@@ -53,29 +49,13 @@ namespace Oxide.Plugins
             permission.RegisterPermission("nodecay.use", this);
             permission.RegisterPermission("nodecay.admin", this);
             LoadData();
-        }
-
-        void OnServerInitialized()
-        {
-            if (!configData.Global.disableWarning) return;
-            //private readonly string ndc = "D2AA9A0376A43CCA72EA06868DCF820C";
-            foreach (BuildingPrivlidge priv in BaseNetworkable.serverEntities.OfType<BuildingPrivlidge>())
-            {
-                if (priv == null) return;
-                if ((permission.UserHasPermission(priv.OwnerID.ToString(), "nodecay.use") && configData.Global.usePermission) || !configData.Global.usePermission)
-                {
-                    nextProtectedCalcTime.SetValue(priv, Time.realtimeSinceStartup * 2f);
-                    cachedProtectedMinutes.SetValue(priv, 1000000000);
-                    priv.SendNetworkUpdateImmediate();
-                }
-            }
+            if (entityinfo.Count == 0) UpdateEnts();
         }
 
         void Loaded() => LoadConfigValues();
 
         private void OnEntitySaved(BuildingPrivlidge buildingPrivilege, BaseNetworkable.SaveInfo saveInfo)
         {
-            OutputRcon("OnEntitySaved called for TC");
             if (configData.Global.disableWarning)
             {
                 if (configData.Global.usePermission)
@@ -116,10 +96,12 @@ namespace Oxide.Plugins
 
         private void LoadData()
         {
+            entityinfo = Interface.Oxide.DataFileSystem.ReadObject<Dictionary<string, List<string>>>(Name + "/entityinfo");
             lastConnected = Interface.Oxide.DataFileSystem.ReadObject<Dictionary<string, long>>(Name + "/lastconnected");
         }
         private void SaveData()
         {
+            Interface.Oxide.DataFileSystem.WriteObject(Name + "/entityinfo", entityinfo);
             Interface.Oxide.DataFileSystem.WriteObject(Name + "/lastconnected", lastConnected);
         }
 
@@ -194,124 +176,6 @@ namespace Oxide.Plugins
                     damageAmount = ProcessBuildingDamage(entity, before);
                     isBlock = true;
                 }
-                else if (entity_name.Equals("campfire") || entity_name.Equals("skull_fire_pit"))
-                {
-                    damageAmount = before * configData.Multipliers.campfireMultiplier;
-                }
-                else if (entity_name.Equals("box.wooden.large") ||
-                     entity_name.Equals("woodbox_deployed") ||
-                     entity_name.Equals("CoffinStorage"))
-                {
-                    damageAmount = before * configData.Multipliers.boxMultiplier;
-                }
-                else if (entity_name.Contains("deployed"))
-                {
-                    damageAmount = before * configData.Multipliers.deployablesMultiplier;
-                }
-                else if(entity_name.Contains("shutter") ||
-                     (entity_name.Contains("door") && !entity_name.Contains("doorway")) ||
-                     entity_name.Contains("reinforced") || entity_name.Contains("shopfront") ||
-                     entity_name.Contains("bars") || entity_name.Contains("netting") ||
-                     entity_name.Contains("hatch") || entity_name.Contains("garagedoor") ||
-                     entity_name.Contains("cell") || entity_name.Contains("fence") ||
-                     entity_name.Contains("grill") ||  entity_name.Contains("speaker") ||
-                     entity_name.Contains("strobe") ||  entity_name.Contains("Strobe") ||
-                     entity_name.Contains("fog") ||  entity_name.Contains("Fog") ||
-                     entity_name.Equals("wall.frame.shopfront.metal.static") || entity_name.Equals("wall.frame.shopfront") ||
-                     entity_name.Equals("wall.window.bars.metal") || entity_name.Equals("candle") ||
-                     entity_name.Equals("SmallCandleSet") || entity_name.Equals("LargeCandleSet") ||
-                     entity_name.Equals("hatchet.entity") || entity_name.Equals("stonehatchet.entity") ||
-                     entity_name.Equals("door.hinged.garage_a"))
-                {
-                    damageAmount = before * configData.Multipliers.deployablesMultiplier;
-                }
-                else if (entity_name.Contains("furnace"))
-                {
-                    damageAmount = before * configData.Multipliers.furnaceMultiplier;
-                }
-                else if (entity_name.Contains("sedan"))
-                {
-                    damageAmount = before * configData.Multipliers.sedanMultiplier;
-                }
-                else if (entity_name.Equals("SAM_Static"))
-                {
-                    damageAmount = before * configData.Multipliers.samMultiplier;
-                }
-                else if (entity_name.Equals("HotAirBalloon"))
-                {
-                    damageAmount = before * configData.Multipliers.baloonMultiplier;
-                    mundane = true;
-                }
-                else if (entity_name.Equals("BBQ.Deployed"))
-                {
-                    damageAmount = before * configData.Multipliers.bbqMultiplier;
-                }
-                else if (entity_name.Equals("watchtower.wood"))
-                {
-                    damageAmount = before * configData.Multipliers.watchtowerMultiplier;
-                }
-                else if (entity_name.Equals("WaterBarrel") ||
-                        entity_name.Equals("jackolantern.angry") || entity_name.Equals("jackolantern.happy") ||
-                        entity_name.Equals("composter") || entity_name.Equals("Composter") ||
-                        entity_name.Equals("water_catcher_small") || entity_name.Equals("water_catcher_large"))
-                {
-                    damageAmount = before * configData.Multipliers.deployablesMultiplier;
-                }
-                else if (entity_name.Equals("beartrap") ||
-                        entity_name.Equals("landmine") ||
-                        entity_name.Equals("spikes.floor"))
-                {
-                    damageAmount = before * configData.Multipliers.trapMultiplier;
-                }
-                else if (entity_name.Contains("barricade"))
-                {
-                    damageAmount = before * configData.Multipliers.barricadeMultiplier;
-                }
-                else if (entity_name.Equals("gates.external.high.stone") || entity_name.Equals("wall.external.high.stone"))
-                {
-                    damageAmount = before * configData.Multipliers.highStoneWallMultiplier;
-                }
-                else if (entity_name.Equals("gates.external.high.wood") || entity_name.Equals("wall.external.high.wood") ||
-                    entity_name.Equals("IceWall") || entity_name.Equals("icewall") || entity_name.Equals("wall.external.high.ice"))
-                {
-                    damageAmount = before * configData.Multipliers.highWoodWallMultiplier;
-                }
-                else if (entity_name.Equals("mining.pumpjack"))
-                {
-                    damageAmount = 0.0f;
-                }
-                else if (entity_name.Equals("Rowboat") || entity_name.Equals("RHIB") || entity_name.Equals("Kayak"))
-                {
-                    damageAmount = before * configData.Multipliers.boatMultiplier;
-                    mundane = true;
-                }
-                else if (entity_name.Equals("minicopter.entity"))
-                {
-                    if (entity.OwnerID != 0) return null; // Skip owned copters covered by other plugins.
-                    damageAmount = before * configData.Multipliers.minicopterMultiplier;
-                    mundane = true;
-                }
-                else if (entity_name.Equals("RidableHorse") || entity_name.Equals("TestRidableHorse"))
-                {
-                    damageAmount = before * configData.Multipliers.horseMultiplier;
-                    mundane = true;
-                }
-                else if (entity_name.Equals("ScrapTransportHelicopter"))
-                {
-                    damageAmount = before * configData.Multipliers.scrapcopterMultiplier;
-                    mundane = true;
-                }
-                else if (entity_name.Equals("BaseVehicle") ||
-                    entity.name.Contains("vehicle.chassis") ||
-                    entity.name.Contains("chassis_") ||
-                    entity.name.Contains("1module_") ||
-                    entity.name.Contains("2module_") ||
-                    entity.name.Contains("3module_") ||
-                    entity.name.Contains("4module_"))
-                {
-                    damageAmount = before * configData.Multipliers.vehicleMultiplier;
-                    mundane = true;
-                }
                 else if (entity is ModularCar)
                 {
                     var garage = entity.GetComponentInParent<ModularCarGarage>();
@@ -322,8 +186,15 @@ namespace Oxide.Plugins
                 }
                 else
                 {
-                    Puts($"Unsupported decaying entity detected: {entity_name} --- please notify author.");
-                    return null;
+                    // Main check for non-building entities/deployables
+                    foreach (KeyValuePair<string, List<string>> entities in entityinfo)
+                    {
+                        if (entities.Value.Contains(entity_name))
+                        {
+                            damageAmount = before * configData.multipliers[entities.Key];
+                            break;
+                        }
+                    }
                 }
 
                 // Check non-building entities for cupboard in range
@@ -335,7 +206,7 @@ namespace Oxide.Plugins
 
                     if (CheckCupboardEntity(entity, mundane))
                     {
-                        damageAmount = before * configData.Multipliers.entityCupboardMultiplier;
+                        damageAmount = before * configData.multipliers["entityCupboard"];
                     }
                 }
 
@@ -362,22 +233,154 @@ namespace Oxide.Plugins
         // Workaround for car chassis that won't die
         private void OnEntityDeath(ModularCar car, HitInfo hitinfo)
         {
-#if DEBUG
-            Puts("Car died!  Checking for associated parts...");
-#endif
+            OutputRcon("Car died!  Checking for associated parts...");
             List<BaseEntity> ents = new List<BaseEntity>();
             Vis.Entities(car.transform.position, 1f, ents);
             foreach(var ent in ents)
             {
                 if(ent.name.Contains("module_car_spawned") && !ent.IsDestroyed)
                 {
-#if DEBUG
-                    Puts($"Killing {ent.ShortPrefabName}");
-#endif
+                    OutputRcon($"Killing {ent.ShortPrefabName}");
                     ent.Kill(BaseNetworkable.DestroyMode.Gib);
                 }
             }
         }
+
+        private void OnNewSave()
+        {
+            UpdateEnts();
+        }
+
+        private void UpdateEnts()
+        {
+            entityinfo["balloon"] = new List<string>();
+            entityinfo["barricade"] = new List<string>();
+            entityinfo["bbq"] = new List<string>();
+            entityinfo["boat"] = new List<string>();
+            entityinfo["box"] = new List<string>();
+            entityinfo["campfire"] = new List<string>();
+            entityinfo["deployables"] = new List<string>();
+            entityinfo["furnace"] = new List<string>();
+            entityinfo["horse"] = new List<string>();
+            entityinfo["minicopter"] = new List<string>();
+            entityinfo["sam"] = new List<string>();
+            entityinfo["scrapcopter"] = new List<string>();
+            entityinfo["sedan"] = new List<string>();
+            entityinfo["trap"] = new List<string>();
+            entityinfo["vehicle"] = new List<string>();
+            entityinfo["watchtower"] = new List<string>();
+            entityinfo["stonewall"] = new List<string>();
+            entityinfo["woodwall"] = new List<string>();
+            entityinfo["mining"] = new List<string>();
+
+            List<string> names = new List<string>();
+            foreach (var ent in Resources.FindObjectsOfTypeAll<BaseCombatEntity>())
+            {
+                string entity_name = ent.ShortPrefabName.ToLower();
+                if (entity_name == "cupboard.tool.deployed") continue;
+                if (entity_name == null) continue;
+                if (names.Contains(entity_name)) continue; // Saves 20-30 seconds of processing time.
+                names.Add(entity_name);
+                //OutputRcon($"Checking {entity_name}");
+
+                if (entity_name.Contains("campfire") || entity_name.Contains("skull_fire_pit"))
+                {
+                    entityinfo["campfire"].Add(entity_name);
+                }
+                else if (entity_name.Contains("box") || entity_name.Contains("coffin"))
+                {
+                    entityinfo["box"].Add(entity_name);
+                }
+                else if (entity_name.Contains("deployed") || entity_name.Contains("shutter") ||
+                         (entity_name.Contains("door") && !entity_name.Contains("doorway")) ||
+                         entity_name.Contains("reinforced") || entity_name.Contains("shopfront") ||
+                         entity_name.Contains("bars") || entity_name.Contains("netting") ||
+                         entity_name.Contains("hatch") || entity_name.Contains("garagedoor") ||
+                         entity_name.Contains("cell") || entity_name.Contains("fence") ||
+                         entity_name.Contains("grill") || entity_name.Contains("speaker") ||
+                         entity_name.Contains("strobe") || entity_name.Contains("strobe") ||
+                         entity_name.Contains("fog") || entity_name.Contains("shopfront") ||
+                         entity_name.Contains("wall.window.bars") ||
+                         entity_name.Contains("candle") || entity_name.Contains("hatchet") ||
+                         entity_name.Contains("graveyard") || entity_name.Contains("water") ||
+                         entity_name.Contains("jackolantern") || entity_name.Contains("composter") ||
+                         entity_name.Contains("workbench"))
+                {
+                    entityinfo["deployables"].Add(entity_name);
+                }
+                else if (entity_name.Contains("furnace"))
+                {
+                    entityinfo["furnace"].Add(entity_name);
+                }
+                else if (entity_name.Contains("sedan"))
+                {
+                    entityinfo["sedan"].Add(entity_name);
+                }
+                else if (entity_name.Contains("sam_static"))
+                {
+                    entityinfo["sam"].Add(entity_name);
+                }
+                else if (entity_name.Contains("balloon"))
+                {
+                    entityinfo["balloon"].Add(entity_name);
+                }
+                else if (entity_name.Contains("bbq"))
+                {
+                    entityinfo["bbq"].Add(entity_name);
+                }
+                else if (entity_name.Contains("watchtower"))
+                {
+                    entityinfo["watchtower"].Add(entity_name);
+                }
+                else if (entity_name.Contains("beartrap") || entity_name.Contains("landmine") || entity_name.Contains("spikes.floor"))
+                {
+                    entityinfo["trap"].Add(entity_name);
+                }
+                else if (entity_name.Contains("barricade"))
+                {
+                    entityinfo["barricade"].Add(entity_name);
+                }
+                else if (entity_name.Contains("external.high.stone"))
+                {
+                    entityinfo["stonewall"].Add(entity_name);
+                }
+                else if (entity_name.Contains("external.high.wood") || entity_name.Contains("external.high.ice") || entity_name.Contains("icewall"))
+                {
+                    entityinfo["woodwall"].Add(entity_name);
+                }
+                else if (entity_name.Contains("mining"))
+                {
+                    entityinfo["mining"].Add(entity_name);
+                }
+                else if (entity_name.Contains("rowboat") || entity_name.Contains("rhib") || entity_name.Contains("kayak"))
+                {
+                    entityinfo["boat"].Add(entity_name);
+                }
+                else if (entity_name.Contains("minicopter"))
+                {
+                    entityinfo["minicopter"].Add(entity_name);
+                }
+                else if (entity_name.Contains("horse"))
+                {
+                    entityinfo["horse"].Add(entity_name);
+                }
+                else if (entity_name.Contains("scraptransport"))
+                {
+                    entityinfo["scrapcopter"].Add(entity_name);
+                }
+                else if (entity_name.Contains("vehicle") ||
+                        entity_name.Contains("chassis_") ||
+                        entity_name.Contains("1module_") ||
+                        entity_name.Contains("2module_") ||
+                        entity_name.Contains("3module_") ||
+                        entity_name.Contains("4module_"))
+                {
+                    entityinfo["vehicle"].Add(entity_name);
+                }
+            }
+            SaveData();
+        }
+
 
         private float ProcessBuildingDamage(BaseEntity entity, float before)
         {
@@ -408,49 +411,49 @@ namespace Oxide.Plugins
             switch(block.grade)
             {
                 case BuildingGrade.Enum.Twigs:
-                    if(hascup) multiplier = configData.Multipliers.twigMultiplier;
+                    if(hascup) multiplier = configData.multipliers["twig"];
                     type = "twig";
                     break;
                 case BuildingGrade.Enum.Wood:
                     if(isHighWall)
                     {
-                        if(hascup) multiplier = configData.Multipliers.highWoodWallMultiplier;
+                        if(hascup) multiplier = configData.multipliers["highWoodWall"];
                         type = "high wood wall";
                     }
                     else if(isHighGate)
                     {
-                        if(hascup) multiplier = configData.Multipliers.highWoodWallMultiplier;
+                        if(hascup) multiplier = configData.multipliers["highWoodWall"];
                         type = "high wood gate";
                     }
                     else
                     {
-                        if(hascup) multiplier = configData.Multipliers.woodMultiplier;
+                        if(hascup) multiplier = configData.multipliers["wood"];
                         type = "wood";
                     }
                     break;
                 case BuildingGrade.Enum.Stone:
                     if(isHighWall)
                     {
-                        if(hascup) multiplier = configData.Multipliers.highStoneWallMultiplier;
+                        if(hascup) multiplier = configData.multipliers["highStoneWall"];
                         type = "high stone wall";
                     }
                     else if(isHighGate)
                     {
-                        if(hascup) multiplier = configData.Multipliers.highStoneWallMultiplier;
+                        if(hascup) multiplier = configData.multipliers["highStoneWall"];
                         type = "high stone gate";
                     }
                     else
                     {
-                        if(hascup) multiplier = configData.Multipliers.stoneMultiplier;
+                        if(hascup) multiplier = configData.multipliers["stone"];
                         type = "stone";
                     }
                     break;
                 case BuildingGrade.Enum.Metal:
-                    if(hascup) multiplier = configData.Multipliers.sheetMultiplier;
+                    if(hascup) multiplier = configData.multipliers["sheet"];
                     type = "sheet";
                     break;
                 case BuildingGrade.Enum.TopTier:
-                    if(hascup) multiplier = configData.Multipliers.armoredMultiplier;
+                    if(hascup) multiplier = configData.multipliers["armored"];
                     type = "armored";
                     break;
                 default:
@@ -496,7 +499,7 @@ namespace Oxide.Plugins
         {
             int targetLayer = LayerMask.GetMask("Construction", "Construction Trigger", "Trigger", "Deployed");
             List<BuildingPrivlidge> cups = new List<BuildingPrivlidge>();
-            Vis.Entities<BuildingPrivlidge>(entity.transform.position, configData.Global.cupboardRange, cups, targetLayer);
+            Vis.Entities(entity.transform.position, configData.Global.cupboardRange, cups, targetLayer);
 
             OutputRcon($"CheckCupboardEntity:   Checking for cupboard within {configData.Global.cupboardRange.ToString()}m of {entity.ShortPrefabName}.", mundane);
 
@@ -511,22 +514,6 @@ namespace Oxide.Plugins
             return false;
         }
 
-        void OnEntitySpawned(BuildingPrivlidge priv)
-        {
-            OutputRcon("OnEntitySpawned called for TC");
-            if (!configData.Global.disableWarning) return;
-            timer.Repeat(0.05f, 40, () =>
-            {
-                if (priv == null) return;
-                if ((permission.UserHasPermission(priv.OwnerID.ToString(), "nodecay.use") && configData.Global.usePermission) || !configData.Global.usePermission)
-                {
-                    nextProtectedCalcTime.SetValue(priv, Time.realtimeSinceStartup * 2f);
-                    cachedProtectedMinutes.SetValue(priv, 65535);
-                    priv.SendNetworkUpdateImmediate();
-                }
-            });
-        }
-
         // Prevent players from adding building resources to cupboard if so configured
         private object CanMoveItem(Item item, PlayerInventory inventory, uint targetContainer, int targetSlot)
         {
@@ -534,21 +521,6 @@ namespace Oxide.Plugins
             if(targetContainer == 0) return null;
             if(targetSlot == 0) return null;
             ItemContainer container = inventory.FindContainer(targetContainer);
-
-            if (configData.Global.disableWarning)
-            {
-                timer.Repeat(0.05f, 40, () =>
-                {
-                    BuildingPrivlidge priv = item?.parent?.entityOwner?.GetComponent<BuildingPrivlidge>();
-                    if (priv == null) return;
-                    if ((permission.UserHasPermission(priv.OwnerID.ToString(), "nodecay.use") && configData.Global.usePermission) || !configData.Global.usePermission)
-                    {
-                        nextProtectedCalcTime.SetValue(priv, Time.realtimeSinceStartup * 2f);
-                        cachedProtectedMinutes.SetValue(priv, 65535);
-                        priv.SendNetworkUpdateImmediate();
-                    }
-                });
-            }
 
             if (!(configData.Global.blockCupboardResources || configData.Global.blockCupboardWood)) return null;
             if (!(configData.Global.blockCupboardStone || configData.Global.blockCupboardMetal || configData.Global.blockCupboardArmor)) return null;
@@ -600,34 +572,37 @@ namespace Oxide.Plugins
                     configData.Debug.outputToRcon = !configData.Debug.outputToRcon;
                     SendReply(player, $"Debug logging set to {configData.Debug.outputToRcon.ToString()}");
                 }
+                else if (args[0] == "update")
+                {
+                    UpdateEnts();
+                }
                 else if(args[0] == "info")
                 {
-                    string info = "NoDecay current settings";
-                    info += "\n\tentityCupboardMultiplier: " + configData.Multipliers.entityCupboardMultiplier.ToString();
-                    info += "\n\ttwigMultiplier: " + configData.Multipliers.twigMultiplier.ToString();
-                    info += "\n\twoodMultiplier: " + configData.Multipliers.woodMultiplier.ToString();
-                    info += "\n\tstoneMultiplier: " + configData.Multipliers.stoneMultiplier.ToString();
-                    info += "\n\tsheetMultiplier: " + configData.Multipliers.sheetMultiplier.ToString();
-                    info += "\n\tarmoredMultiplier: " + configData.Multipliers.armoredMultiplier.ToString();
-
-                    info += "\n\tbaloonMultiplier: " + configData.Multipliers.baloonMultiplier.ToString();
-                    info += "\n\tbarricadeMultiplier: " + configData.Multipliers.barricadeMultiplier.ToString();
-                    info += "\n\tbbqMultiplier: " + configData.Multipliers.bbqMultiplier.ToString();
-                    info += "\n\tboatMultiplier: " + configData.Multipliers.boatMultiplier.ToString();
-                    info += "\n\tboxMultiplier: " + configData.Multipliers.boxMultiplier.ToString();
-                    info += "\n\tcampfireMultiplier " + configData.Multipliers.campfireMultiplier.ToString();
-                    info += "\n\tdeployablesMultiplier: " + configData.Multipliers.deployablesMultiplier.ToString();
-                    info += "\n\tfurnaceMultiplier: " + configData.Multipliers.furnaceMultiplier.ToString();
-                    info += "\n\thighWoodWallMultiplier: " + configData.Multipliers.highWoodWallMultiplier.ToString();
-                    info += "\n\thighStoneWallMultiplier: " + configData.Multipliers.highStoneWallMultiplier.ToString();
-                    info += "\n\thorseMultiplier: " + configData.Multipliers.horseMultiplier.ToString();
-                    info += "\n\tminicopterMultiplier: " + configData.Multipliers.minicopterMultiplier.ToString();
-                    info += "\n\tsamMultiplier: " + configData.Multipliers.samMultiplier.ToString();
-                    info += "\n\tscrapcopterMultiplier: " + configData.Multipliers.scrapcopterMultiplier.ToString();
-                    info += "\n\tsedanMultiplier: " + configData.Multipliers.sedanMultiplier.ToString();
-                    info += "\n\ttrapMultiplier: " + configData.Multipliers.trapMultiplier.ToString();
-                    info += "\n\tvehicleMultiplier: " + configData.Multipliers.vehicleMultiplier.ToString();
-                    info += "\n\twatchtowerMultiplier: " + configData.Multipliers.watchtowerMultiplier.ToString();
+                    string info = "NoDecay current settings:\n  Multipliers:";
+                    info += "\n\tarmored: " + configData.multipliers["armored"];ToString();
+                    info += "\n\tballoon: " + configData.multipliers["balloon"];ToString();
+                    info += "\n\tbarricade: " + configData.multipliers["barricade"];ToString();
+                    info += "\n\tbbq: " + configData.multipliers["bbq"];ToString();
+                    info += "\n\tboat: " + configData.multipliers["boat"];ToString();
+                    info += "\n\tbox: " + configData.multipliers["box"];ToString();
+                    info += "\n\tcampfire" + configData.multipliers["campfire"];ToString();
+                    info += "\n\tdeployables: " + configData.multipliers["deployables"];ToString();
+                    info += "\n\tentityCupboard: " + configData.multipliers["entityCupboard"];ToString();
+                    info += "\n\tfurnace: " + configData.multipliers["furnace"];ToString();
+                    info += "\n\thighWoodWall: " + configData.multipliers["highWoodWall"];ToString();
+                    info += "\n\thighStoneWall: " + configData.multipliers["highStoneWall"];ToString();
+                    info += "\n\thorse: " + configData.multipliers["horse"];ToString();
+                    info += "\n\tminicopter: " + configData.multipliers["minicopter"];ToString();
+                    info += "\n\tsam: " + configData.multipliers["sam"];ToString();
+                    info += "\n\tscrapcopter: " + configData.multipliers["scrapcopter"];ToString();
+                    info += "\n\tsedan: " + configData.multipliers["sedan"];ToString();
+                    info += "\n\tsheet: " + configData.multipliers["sheet"];ToString();
+                    info += "\n\tstone: " + configData.multipliers["stone"];ToString();
+                    info += "\n\ttrap: " + configData.multipliers["trap"];ToString();
+                    info += "\n\ttwig: " + configData.multipliers["twig"];ToString();
+                    info += "\n\tvehicle: " + configData.multipliers["vehicle"];ToString();
+                    info += "\n\twatchtower: " + configData.multipliers["watchtower"];ToString();
+                    info += "\n\twood: " + configData.multipliers["wood"];ToString();
 
                     info += "\n\n\tEnabled: " + enabled.ToString();
                     info += "\n\tdisableWarning: " + configData.Global.disableWarning.ToString();
@@ -665,8 +640,8 @@ namespace Oxide.Plugins
         {
             StringBuilder sb = new StringBuilder();
             sb.Append("<color=#05eb59>" + Name + " " + Version + "</color> · Controls decay\n");
-            sb.Append("  · ").AppendLine($"twig={configData.Multipliers.twigMultiplier} - campfire={configData.Multipliers.campfireMultiplier}");
-            sb.Append("  · ").Append($"wood ={ configData.Multipliers.woodMultiplier} - stone ={ configData.Multipliers.stoneMultiplier} - sheet ={ configData.Multipliers.sheetMultiplier} - armored ={ configData.Multipliers.armoredMultiplier}\n");
+            sb.Append("  · ").AppendLine($"twig={configData.multipliers["twig"]} - campfire={configData.multipliers["campfire"]}");
+            sb.Append("  · ").Append($"wood ={ configData.multipliers["wood"]} - stone ={ configData.multipliers["stone"]} - sheet ={ configData.multipliers["sheet"]} - armored ={ configData.multipliers["armored"]}\n");
 
             if(configData.Global.requireCupboard == true)
             {
@@ -703,8 +678,9 @@ namespace Oxide.Plugins
         {
             public Debug Debug = new Debug();
             public Global Global = new Global();
+            public SortedDictionary<string, float> multipliers;
+//            public Multipliers Mutipliers = new Multipliers(); // Temporary from old configs
             public Multipliers Multipliers = new Multipliers();
-            public Multipliers Mutipliers = new Multipliers(); // Temporary from old configs
             public VersionNumber Version;
         }
 
@@ -734,6 +710,7 @@ namespace Oxide.Plugins
             public double warningTime = 10;
         }
 
+        // Legacy
         private class Multipliers
         {
             public float entityCupboardMultiplier = 0f;
@@ -762,32 +739,78 @@ namespace Oxide.Plugins
             public float watchtowerMultiplier = 0f;
         }
 
-        protected override void LoadDefaultConfig() => Puts("New configuration file created.");
+        protected override void LoadDefaultConfig()
+        {
+            Puts("Creating new config file");
+            configData = new ConfigData
+            {
+                Version = Version,
+                multipliers = new SortedDictionary<string, float>()
+                {
+                    { "armored", 0f },
+                    { "balloon", 0f },
+                    { "barricade", 0f },
+                    { "bbq", 0f },
+                    { "boat", 0f },
+                    { "box", 0f },
+                    { "campfire", 0f },
+                    { "entityCupboard", 0f },
+                    { "furnace", 0f },
+                    { "highWoodWall", 0f },
+                    { "highStoneWall", 0f },
+                    { "horse", 0f },
+                    { "minicopter", 0f },
+                    { "mining", 0f },
+                    { "sam", 0f },
+                    { "scrapcopter", 0f },
+                    { "sedan", 0f },
+                    { "sheet", 0f },
+                    { "stone", 0f },
+                    { "twig", 1.0f },
+                    { "trap", 0f },
+                    { "vehicle", 0f },
+                    { "watchtower", 0f },
+                    { "wood", 0f },
+                    { "deployables", 0.1f } // For all others not listed
+                }
+            };
+            SaveConfig(configData);
+        }
 
         void LoadConfigValues()
         {
             configData = Config.ReadObject<ConfigData>();
-            if (configData.Version < new VersionNumber(1, 0, 46) || configData.Version == null)
+
+            if (configData.Version < new VersionNumber(1, 0, 63))
             {
-                Puts("Upgrading config file...");
-                configData.Multipliers = configData.Mutipliers;
-                configData.Mutipliers = null;
-            }
-            if (configData.Version < new VersionNumber(1, 0, 47))
-            {
-                configData.Multipliers.entityCupboardMultiplier = 0f;
-            }
-            if (configData.Version < new VersionNumber(1, 0, 48))
-            {
-                configData.Global.disableWarning = true;
-            }
-            if (configData.Version < new VersionNumber(1, 0, 51))
-            {
-                configData.Global.useJPipes = false;
-            }
-            if (configData.Version < new VersionNumber(1, 0, 53))
-            {
-                configData.Global.protectVehicleOnLift = true;
+                configData.multipliers = new SortedDictionary<string, float>()
+                {
+                    { "entityCupboard", configData.Multipliers.entityCupboardMultiplier },
+                    { "twig", configData.Multipliers.twigMultiplier },
+                    { "wood", configData.Multipliers.woodMultiplier },
+                    { "stone", configData.Multipliers.stoneMultiplier },
+                    { "sheet", configData.Multipliers.sheetMultiplier },
+                    { "armored", configData.Multipliers.armoredMultiplier },
+                    { "balloon", configData.Multipliers.baloonMultiplier },
+                    { "barricade", configData.Multipliers.barricadeMultiplier },
+                    { "bbq", configData.Multipliers.bbqMultiplier },
+                    { "boat", configData.Multipliers.boatMultiplier },
+                    { "box", configData.Multipliers.boxMultiplier },
+                    { "campfire", configData.Multipliers.campfireMultiplier },
+                    { "furnace", configData.Multipliers.furnaceMultiplier },
+                    { "highWoodWall", configData.Multipliers.highWoodWallMultiplier },
+                    { "highStoneWall", configData.Multipliers.highStoneWallMultiplier },
+                    { "horse", configData.Multipliers.horseMultiplier },
+                    { "minicopter", configData.Multipliers.minicopterMultiplier },
+                    { "sam", configData.Multipliers.samMultiplier },
+                    { "scrapcopter", configData.Multipliers.scrapcopterMultiplier },
+                    { "sedan", configData.Multipliers.sedanMultiplier },
+                    { "trap", configData.Multipliers.trapMultiplier },
+                    { "vehicle", configData.Multipliers.vehicleMultiplier },
+                    { "watchtower", configData.Multipliers.watchtowerMultiplier },
+                    { "deployables", configData.Multipliers.deployablesMultiplier } // For all others not listed
+                };
+                configData.Multipliers = null;
             }
             configData.Version = Version;
 
