@@ -401,6 +401,7 @@ namespace Oxide.Plugins
                 else if(args[0] == "info")
                 {
                     string info = "NoDecay current settings";
+                    info += "\n\tentityCupboardMultiplier: " + configData.Multipliers.entityCupboardMultiplier.ToString();
                     info += "\n\ttwigMultiplier: " + configData.Multipliers.twigMultiplier.ToString();
                     info += "\n\twoodMultiplier: " + configData.Multipliers.woodMultiplier.ToString();
                     info += "\n\tstoneMultiplier: " + configData.Multipliers.stoneMultiplier.ToString();
