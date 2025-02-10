@@ -29,11 +29,11 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.70", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.71", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
-    class NoDecay : RustPlugin
+    internal class NoDecay : RustPlugin
     {
         private ConfigData configData;
         private bool enabled = true;
@@ -45,10 +45,10 @@ namespace Oxide.Plugins
 
         private const string permNoDecayUse = "nodecay.use";
         private const string permNoDecayAdmin = "nodecay.admin";
-        const string TCOVR = "nodecay.overlay";
+        private const string TCOVR = "nodecay.overlay";
 
         [PluginReference]
-        private readonly Plugin JPipes;
+        private readonly Plugin ZoneManager, GridAPI, JPipes;
 
         #region Message
         private string Lang(string key, string id = null, params object[] args) => string.Format(lang.GetMessage(key, this, id), args);
@@ -71,7 +71,7 @@ namespace Oxide.Plugins
         }
         #endregion
 
-        void Init()
+        private void Init()
         {
             AddCovalenceCommand("nodecay", "CmdInfo");
             permission.RegisterPermission(permNoDecayUse, this);
@@ -88,7 +88,7 @@ namespace Oxide.Plugins
             }
         }
 
-        void OnServerInitialized()
+        private void OnServerInitialized()
         {
             // Workaround for no decay on horses, even if set to decay here
             if (configData.multipliers["horse"] > 0)
@@ -102,12 +102,12 @@ namespace Oxide.Plugins
 
                     if (newdecaytime > 0)
                     {
-                        OutputRcon($"Adding {Math.Floor(newdecaytime).ToString()} minutes of decay time to horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes");
+                        OutputRcon($"Adding {Math.Floor(newdecaytime).ToString()} minutes of decay time to horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
                         horse.AddDecayDelay(newdecaytime);
                     }
                     else
                     {
-                        OutputRcon($"Subtracting {Math.Abs(Math.Floor(newdecaytime)).ToString()} minutes of decay time from horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes");
+                        OutputRcon($"Subtracting {Math.Abs(Math.Floor(newdecaytime)).ToString()} minutes of decay time from horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
                         //horse.nextDecayTime = Time.time + newdecaytime;
                         horse.AddDecayDelay(newdecaytime);
                     }
@@ -122,22 +122,23 @@ namespace Oxide.Plugins
             if (!configData.Global.disableLootWarning) return null;
             if (!player.IPlayer.HasPermission(permNoDecayUse) && configData.Global.usePermission) return null;
             if (container == null) return null;
-            var privs = container.GetComponentInParent<BuildingPrivlidge>() ?? null;
+            var privs = container.GetComponentInParent<BuildingPrivlidge>();
             if (privs == null) return null;
 
             TcOverlay(player, privs);
             return null;
         }
+
         private void OnLootEntityEnd(BasePlayer player, BaseCombatEntity entity)
         {
             if (!configData.Global.disableLootWarning) return;
             if (!player.IPlayer.HasPermission(permNoDecayUse) && configData.Global.usePermission) return;
             if (entity == null) return;
-            var privs = entity.GetComponentInParent<BuildingPrivlidge>() ?? null;
-            if (privs == null) return;
+            if (entity.GetComponentInParent<BuildingPrivlidge>() == null) return;
 
             CuiHelper.DestroyUi(player, TCOVR);
         }
+
         private void TcOverlay(BasePlayer player, BaseEntity entity)
         {
             CuiHelper.DestroyUi(player, TCOVR);
@@ -148,7 +149,7 @@ namespace Oxide.Plugins
             CuiHelper.AddUi(player, container);
         }
 
-        void Loaded() => LoadConfigValues();
+        private void Loaded() => LoadConfigValues();
 
         private void OnEntitySaved(BuildingPrivlidge buildingPrivilege, BaseNetworkable.SaveInfo saveInfo)
         {
@@ -180,8 +181,9 @@ namespace Oxide.Plugins
             }
         }
 
-        void OnUserConnected(IPlayer player) => OnUserDisconnected(player);
-        void OnUserDisconnected(IPlayer player)
+        private void OnUserConnected(IPlayer player) => OnUserDisconnected(player);
+
+        private void OnUserDisconnected(IPlayer player)
         {
             long lc = 0;
             lastConnected.TryGetValue(player.Id, out lc);
@@ -202,6 +204,7 @@ namespace Oxide.Plugins
             lastConnected = Interface.Oxide.DataFileSystem.ReadObject<Dictionary<string, long>>(Name + "/lastconnected");
             disabled = Interface.Oxide.DataFileSystem.ReadObject<List<ulong>>(Name + "/disabled");
         }
+
         private void SaveData()
         {
             Interface.Oxide.DataFileSystem.WriteObject(Name + "/entityinfo", entityinfo);
@@ -209,7 +212,7 @@ namespace Oxide.Plugins
             Interface.Oxide.DataFileSystem.WriteObject(Name + "/disabled", disabled);
         }
 
-        object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitInfo)
+        private object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitInfo)
         {
 //            Puts(entity.name);
             if (!enabled) return null;
@@ -270,17 +273,11 @@ namespace Oxide.Plugins
 
                 if (entity is BuildingBlock)
                 {
-                    if (configData.Global.useJPipes && JPipes)
+                    if (configData.Global.useJPipes && JPipes && (bool)JPipes?.Call("IsPipe", entity) && (bool)JPipes?.Call("IsNoDecayEnabled"))
                     {
-                        if ((bool)JPipes?.Call("IsPipe", entity))
-                        {
-                            if ((bool)JPipes?.Call("IsNoDecayEnabled"))
-                            {
-                                OutputRcon("Found a JPipe with nodecay enabled");
-                                hitInfo.damageTypes.Scale(Rust.DamageType.Decay, 0f);
-                                return null;
-                            }
-                        }
+                        OutputRcon("Found a JPipe with nodecay enabled");
+                        hitInfo.damageTypes.Scale(Rust.DamageType.Decay, 0f);
+                        return null;
                     }
 
                     damageAmount = ProcessBuildingDamage(entity, before);
@@ -302,7 +299,11 @@ namespace Oxide.Plugins
                         //private Dictionary<string, List<string>> entityinfo = new Dictionary<string, List<string>>();
                         if (entities.Value.Contains(entity_name))
                         {
-                            OutputRcon($"Found {entity_name} listed in {entities.Key}");
+                            if (entities.Key.Equals("vehicle") || entities.Key.Equals("boat") || entities.Key.Equals("balloon") || entities.Key.Equals("horse"))
+                            {
+                                mundane = true;
+                            }
+                            OutputRcon($"Found {entity_name} listed in {entities.Key}", mundane);
                             if (configData.multipliers.ContainsKey(entities.Key))
                             {
                                 damageAmount = before * configData.multipliers[entities.Key];
@@ -317,7 +318,7 @@ namespace Oxide.Plugins
                 {
                     // Verify that we should check for a cupboard and ensure that one exists.
                     // If so, multiplier will be set to entityCupboardMultiplier.
-                    OutputRcon($"NoDecay checking for local cupboard.", mundane);
+                    OutputRcon("NoDecay checking for local cupboard.", mundane);
 
                     if (CheckCupboardEntity(entity, mundane))
                     {
@@ -325,13 +326,31 @@ namespace Oxide.Plugins
                     }
                 }
 
+                string pos = "";
+                string zones = "";
+                bool inzone = false;
+                if (configData.Debug.logPosition)
+                {
+                    pos = $" at {PositionToGrid(entity.transform.position)} {entity.transform.position.ToString()}";
+                    string[] zonedata = GetEntityZones(entity);
+                    if (zonedata.Length > 0)
+                    {
+                        inzone = true;
+                        zones = string.Join(",", zonedata);
+                    }
+                }
+
                 NextTick(() =>
                 {
-                    OutputRcon($"Decay ({entity_name} - {entity.net.ID.ToString()}) before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
+                    OutputRcon($"Decay [{entity_name}{pos} - {entity.net.ID.ToString()}] before: {before} after: {damageAmount}, item health {entity.health.ToString()}", mundane);
+                    if (inzone)
+                    {
+                        OutputRcon($"Decay [{entity_name}] FOUND overlapping ZoneManager zone(s): {zones}", mundane);
+                    }
                     entity.health -= damageAmount;
                     if (entity.health == 0 && configData.Global.DestroyOnZero)
                     {
-                        OutputRcon($"Entity {entity_name} completely decayed - destroying!", mundane);
+                        OutputRcon($"Entity {entity_name}{pos} completely decayed - destroying!", mundane);
                         if (entity == null) return;
                         entity.Kill(BaseNetworkable.DestroyMode.Gib);
                     }
@@ -345,9 +364,9 @@ namespace Oxide.Plugins
             }
         }
 
-        // Workaround for no decay on horses, even if set to decay here
-        void OnEntitySpawned(RidableHorse horse)
+        private void OnEntitySpawned(RidableHorse horse)
         {
+            // Workaround for no decay on horses, even if set to decay here
             if (horse == null) return;
             if (horse.net == null) return;
 
@@ -356,16 +375,15 @@ namespace Oxide.Plugins
                 float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
                 if (newdecaytime > 0)
                 {
-                    OutputRcon($"Adding {Math.Floor(newdecaytime).ToString()} minutes of decay time to horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes");
+                    OutputRcon($"Adding {Math.Floor(newdecaytime).ToString()} minutes of decay time to horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
                     horse.AddDecayDelay(newdecaytime);
                 }
                 else
                 {
-                    OutputRcon($"Subtracting {Math.Abs(Math.Floor(newdecaytime)).ToString()} minutes of decay time from horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes");
+                    OutputRcon($"Subtracting {Math.Abs(Math.Floor(newdecaytime)).ToString()} minutes of decay time from horse {horse.net.ID.ToString()}, now {Math.Floor(180f + newdecaytime).ToString()} minutes", true);
                     horse.AddDecayDelay(newdecaytime);
                 }
                 horse.SetDecayActive(true);
-                return;
             }
         }
 
@@ -535,7 +553,7 @@ namespace Oxide.Plugins
 
             // Verify that we should check for a cupboard and ensure that one exists.
             // If not, multiplier will be standard of 1.0f (hascup true).
-            if (configData.Global.requireCupboard == true)
+            if (configData.Global.requireCupboard)
             {
                 OutputRcon($"NoDecay checking for local cupboard.");
                 hascup = CheckCupboardBlock(block, entity.LookupPrefab().name, block.grade.ToString().ToLower());
@@ -632,7 +650,7 @@ namespace Oxide.Plugins
         }
 
         // Non-block entity check
-        bool CheckCupboardEntity(BaseEntity entity, bool mundane = false)
+        private bool CheckCupboardEntity(BaseEntity entity, bool mundane = false)
         {
             if (configData.Global.useCupboardRange)
             {
@@ -714,73 +732,68 @@ namespace Oxide.Plugins
 
         #region command
         [Command("nodecay")]
-        void CmdInfo(IPlayer iplayer, string command, string[] args)
+        private void CmdInfo(IPlayer iplayer, string command, string[] args)
         {
-            if (permission.UserHasPermission(iplayer.Id, permNoDecayAdmin))
+            if (permission.UserHasPermission(iplayer.Id, permNoDecayAdmin) && args.Length > 0)
             {
-                if (args.Length > 0)
+                switch (args[0])
                 {
-                    switch (args[0])
-                    {
-                        case "enable":
-                            enabled = !enabled;
-                            Message(iplayer, "ndstatus", enabled.ToString());
-                            SaveConfig();
-                            return;
-                        case "log":
-                            configData.Debug.outputToRcon = !configData.Debug.outputToRcon;
-                            Message(iplayer, "nddebug", configData.Debug.outputToRcon.ToString());
-                            return;
-                        case "update":
-                            UpdateEnts();
-                            return;
-                        case "info":
-                            string info = Lang("ndsettings");
-                            info += "\n\tarmored: " + configData.multipliers["armored"]; ToString();
-                            info += "\n\tballoon: " + configData.multipliers["balloon"]; ToString();
-                            info += "\n\tbarricade: " + configData.multipliers["barricade"]; ToString();
-                            info += "\n\tbbq: " + configData.multipliers["bbq"]; ToString();
-                            info += "\n\tboat: " + configData.multipliers["boat"]; ToString();
-                            info += "\n\tbox: " + configData.multipliers["box"]; ToString();
-                            info += "\n\tcampfire" + configData.multipliers["campfire"]; ToString();
-                            info += "\n\tdeployables: " + configData.multipliers["deployables"]; ToString();
-                            info += "\n\tentityCupboard: " + configData.multipliers["entityCupboard"]; ToString();
-                            info += "\n\tfurnace: " + configData.multipliers["furnace"]; ToString();
-                            info += "\n\thighWoodWall: " + configData.multipliers["highWoodWall"]; ToString();
-                            info += "\n\thighStoneWall: " + configData.multipliers["highStoneWall"]; ToString();
-                            info += "\n\thorse: " + configData.multipliers["horse"]; ToString();
-                            info += "\n\tminicopter: " + configData.multipliers["minicopter"]; ToString();
-                            info += "\n\tsam: " + configData.multipliers["sam"]; ToString();
-                            info += "\n\tscrapcopter: " + configData.multipliers["scrapcopter"]; ToString();
-                            info += "\n\tsedan: " + configData.multipliers["sedan"]; ToString();
-                            info += "\n\tsheet: " + configData.multipliers["sheet"]; ToString();
-                            info += "\n\tstone: " + configData.multipliers["stone"]; ToString();
-                            info += "\n\ttrap: " + configData.multipliers["trap"]; ToString();
-                            info += "\n\ttwig: " + configData.multipliers["twig"]; ToString();
-                            info += "\n\tvehicle: " + configData.multipliers["vehicle"]; ToString();
-                            info += "\n\twatchtower: " + configData.multipliers["watchtower"]; ToString();
-                            info += "\n\twood: " + configData.multipliers["wood"]; ToString();
+                    case "enable":
+                        enabled = !enabled;
+                        Message(iplayer, "ndstatus", enabled.ToString());
+                        SaveConfig();
+                        return;
+                    case "log":
+                        configData.Debug.outputToRcon = !configData.Debug.outputToRcon;
+                        Message(iplayer, "nddebug", configData.Debug.outputToRcon.ToString());
+                        return;
+                    case "update":
+                        UpdateEnts();
+                        return;
+                    case "info":
+                        string info = Lang("ndsettings");
+                        info += "\n\tarmored: " + configData.multipliers["armored"]; ToString();
+                        info += "\n\tballoon: " + configData.multipliers["balloon"]; ToString();
+                        info += "\n\tbarricade: " + configData.multipliers["barricade"]; ToString();
+                        info += "\n\tbbq: " + configData.multipliers["bbq"]; ToString();
+                        info += "\n\tboat: " + configData.multipliers["boat"]; ToString();
+                        info += "\n\tbox: " + configData.multipliers["box"]; ToString();
+                        info += "\n\tcampfire" + configData.multipliers["campfire"]; ToString();
+                        info += "\n\tdeployables: " + configData.multipliers["deployables"]; ToString();
+                        info += "\n\tentityCupboard: " + configData.multipliers["entityCupboard"]; ToString();
+                        info += "\n\tfurnace: " + configData.multipliers["furnace"]; ToString();
+                        info += "\n\thighWoodWall: " + configData.multipliers["highWoodWall"]; ToString();
+                        info += "\n\thighStoneWall: " + configData.multipliers["highStoneWall"]; ToString();
+                        info += "\n\thorse: " + configData.multipliers["horse"]; ToString();
+                        info += "\n\tminicopter: " + configData.multipliers["minicopter"]; ToString();
+                        info += "\n\tsam: " + configData.multipliers["sam"]; ToString();
+                        info += "\n\tscrapcopter: " + configData.multipliers["scrapcopter"]; ToString();
+                        info += "\n\tsedan: " + configData.multipliers["sedan"]; ToString();
+                        info += "\n\tsheet: " + configData.multipliers["sheet"]; ToString();
+                        info += "\n\tstone: " + configData.multipliers["stone"]; ToString();
+                        info += "\n\ttrap: " + configData.multipliers["trap"]; ToString();
+                        info += "\n\ttwig: " + configData.multipliers["twig"]; ToString();
+                        info += "\n\tvehicle: " + configData.multipliers["vehicle"]; ToString();
+                        info += "\n\twatchtower: " + configData.multipliers["watchtower"]; ToString();
+                        info += "\n\twood: " + configData.multipliers["wood"]; ToString();
 
-                            info += "\n\n\tEnabled: " + enabled.ToString();
-                            info += "\n\tdisableWarning: " + configData.Global.disableWarning.ToString();
-                            info += "\n\tprotectedDays: " + configData.Global.protectedDays.ToString();
-                            info += "\n\tprotectVehicleOnLift: " + configData.Global.protectVehicleOnLift.ToString();
-                            info += "\n\tusePermission: " + configData.Global.usePermission.ToString();
-                            info += "\n\trequireCupboard: " + configData.Global.requireCupboard.ToString();
-                            info += "\n\tCupboardEntity: " + configData.Global.cupboardCheckEntity.ToString();
-                            info += "\n\tcupboardRange: " + configData.Global.cupboardRange.ToString();
-                            info += "\n\tblockCupboardResources: " + configData.Global.blockCupboardResources.ToString();
-                            info += "\n\tblockCupboardWood: " + configData.Global.blockCupboardWood.ToString();
-                            info += "\n\tblockCupboardStone: " + configData.Global.blockCupboardStone.ToString();
-                            info += "\n\tblockCupboardMetal: " + configData.Global.blockCupboardMetal.ToString();
-                            info += "\n\tblockCupboardArmor: " + configData.Global.blockCupboardArmor.ToString();
+                        info += "\n\n\tEnabled: " + enabled.ToString();
+                        info += "\n\tdisableWarning: " + configData.Global.disableWarning.ToString();
+                        info += "\n\tprotectedDays: " + configData.Global.protectedDays.ToString();
+                        info += "\n\tprotectVehicleOnLift: " + configData.Global.protectVehicleOnLift.ToString();
+                        info += "\n\tusePermission: " + configData.Global.usePermission.ToString();
+                        info += "\n\trequireCupboard: " + configData.Global.requireCupboard.ToString();
+                        info += "\n\tCupboardEntity: " + configData.Global.cupboardCheckEntity.ToString();
+                        info += "\n\tcupboardRange: " + configData.Global.cupboardRange.ToString();
+                        info += "\n\tblockCupboardResources: " + configData.Global.blockCupboardResources.ToString();
+                        info += "\n\tblockCupboardWood: " + configData.Global.blockCupboardWood.ToString();
+                        info += "\n\tblockCupboardStone: " + configData.Global.blockCupboardStone.ToString();
+                        info += "\n\tblockCupboardMetal: " + configData.Global.blockCupboardMetal.ToString();
+                        info += "\n\tblockCupboardArmor: " + configData.Global.blockCupboardArmor.ToString();
 
-                            Message(iplayer, info);
-                            info = null;
-                            return;
-                        default:
-                            break;
-                    }
+                        Message(iplayer, info);
+                        info = null;
+                        return;
                 }
             }
             if (iplayer.Id == "server_console") return;
@@ -856,18 +869,10 @@ namespace Oxide.Plugins
         {
             if (playerid > 0)
             {
-                if (disabled.Contains(playerid))
-                {
-                    return false;
-                }
-                return true;
+                return !disabled.Contains(playerid);
             }
 
-            if (enabled)
-            {
-                return true;
-            }
-            return false;
+            return enabled;
         }
 
         // Sets player status if playerid > 0
@@ -909,33 +914,59 @@ namespace Oxide.Plugins
         {
             DateTime date = dateTime.ToUniversalTime();
             long ticks = date.Ticks - new DateTime(1970, 1, 1, 0, 0, 0, 0).Ticks;
-            long ts = ticks / TimeSpan.TicksPerSecond;
-            return ts;
+            return ticks / TimeSpan.TicksPerSecond;
+        }
+
+        private string[] GetEntityZones(BaseEntity entity)
+        {
+            if (entity.IsValid() && ZoneManager)
+            {
+                return (string[])ZoneManager?.Call("GetEntityZoneIDs", new object[] { entity });
+            }
+            return null;
+        }
+
+        public string PositionToGrid(Vector3 position)
+        {
+            if (GridAPI != null)
+            {
+                string[] g = (string[]) GridAPI.CallHook("GetGrid", position);
+                return string.Concat(g);
+            }
+            else
+            {
+                // From GrTeleport for display only
+                Vector2 r = new Vector2((World.Size / 2) + position.x, (World.Size / 2) + position.z);
+                float x = Mathf.Floor(r.x / 146.3f) % 26;
+                float z = Mathf.Floor(World.Size / 146.3f) - Mathf.Floor(r.y / 146.3f);
+
+                return $"{(char)('A' + x)}{z - 1}";
+            }
         }
 
         [HookMethod("SendHelpText")]
         private void SendHelpText(BasePlayer player)
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append("<color=#05eb59>" + Name + " " + Version + "</color> · Controls decay\n");
-            sb.Append("  · ").AppendLine($"twig={configData.multipliers["twig"]} - campfire={configData.multipliers["campfire"]}");
-            sb.Append("  · ").Append($"wood ={ configData.multipliers["wood"]} - stone ={ configData.multipliers["stone"]} - sheet ={ configData.multipliers["sheet"]} - armored ={ configData.multipliers["armored"]}\n");
+            sb.Append("<color=#05eb59>").Append(Name).Append(' ').Append(Version).Append("</color> · Controls decay\n");
+            sb.Append("  · ").Append("twig=").Append(configData.multipliers["twig"]).Append(" - campfire=").Append(configData.multipliers["campfire"]).AppendLine();
+            sb.Append("  · ").Append("wood =").Append(configData.multipliers["wood"]).Append(" - stone =").Append(configData.multipliers["stone"]).Append(" - sheet =").Append(configData.multipliers["sheet"]).Append(" - armored =").Append(configData.multipliers["armored"]).Append('\n');
 
-            if (configData.Global.requireCupboard == true)
+            if (configData.Global.requireCupboard)
             {
-                if (configData.Global.cupboardCheckEntity == true)
+                if (configData.Global.cupboardCheckEntity)
                 {
                     string range = configData.Global.cupboardRange.ToString();
-                    sb.Append("  · ").Append($"cupboard check ={ true } - entity range ={ range }");
+                    sb.Append("  · ").Append("cupboard check =").Append(true).Append(" - entity range =").Append(range);
                 }
                 else
                 {
-                    sb.Append("  · ").Append($"cupboard check ={ true } - entity check ={ false }");
+                    sb.Append("  · ").Append("cupboard check =").Append(true).Append(" - entity check =").Append(false);
                 }
             }
             else
             {
-                sb.Append("  · ").Append($"cupboard check ={ false }");
+                sb.Append("  · ").Append("cupboard check =").Append(false);
             }
             player.ChatMessage(sb.ToString());
         }
@@ -954,8 +985,8 @@ namespace Oxide.Plugins
         #region config
         private class ConfigData
         {
-            public Debug Debug = new Debug();
-            public Global Global = new Global();
+            public Debug Debug;
+            public Global Global;
             public SortedDictionary<string, float> multipliers;
             public Multipliers Multipliers = new Multipliers();
             public VersionNumber Version;
@@ -965,57 +996,58 @@ namespace Oxide.Plugins
         {
             public bool outputToRcon;
             public bool outputMundane;
+            public bool logPosition;
         }
 
         private class Global
         {
-            public bool usePermission = false;
-            public bool requireCupboard = false;
-            public bool cupboardCheckEntity = false;
-            public float protectedDays = 0;
-            public float cupboardRange = 30f;
-            public bool useCupboardRange = false;
-            public bool DestroyOnZero = true;
-            public bool useJPipes = false;
-            public bool blockCupboardResources = false;
-            public bool blockCupboardWood = false;
-            public bool blockCupboardStone = false;
-            public bool blockCupboardMetal = false;
-            public bool blockCupboardArmor = false;
-            public bool disableWarning = true;
-            public bool disableLootWarning = false;
-            public bool protectVehicleOnLift = true;
-            public float protectedDisplayTime = 4400;
-            public double warningTime = 10;
+            public bool usePermission;
+            public bool requireCupboard;
+            public bool cupboardCheckEntity;
+            public float protectedDays;
+            public float cupboardRange;
+            public bool useCupboardRange;
+            public bool DestroyOnZero;
+            public bool useJPipes;
+            public bool blockCupboardResources;
+            public bool blockCupboardWood;
+            public bool blockCupboardStone;
+            public bool blockCupboardMetal;
+            public bool blockCupboardArmor;
+            public bool disableWarning;
+            public bool disableLootWarning;
+            public bool protectVehicleOnLift;
+            public float protectedDisplayTime;
+            public double warningTime;
         }
 
-        // Legacy
         private class Multipliers
         {
-            public float entityCupboardMultiplier = 0f;
-            public float twigMultiplier = 1.0f;
-            public float woodMultiplier = 0f;
-            public float stoneMultiplier = 0f;
-            public float sheetMultiplier = 0f;
-            public float armoredMultiplier = 0f;
-            public float baloonMultiplier = 0f;
-            public float barricadeMultiplier = 0f;
-            public float bbqMultiplier = 0f;
-            public float boatMultiplier = 0f;
-            public float boxMultiplier = 0f;
-            public float campfireMultiplier = 0f;
-            public float deployablesMultiplier = 0f;
-            public float furnaceMultiplier = 0f;
-            public float highWoodWallMultiplier = 0f;
-            public float highStoneWallMultiplier = 0f;
-            public float horseMultiplier = 0f;
-            public float minicopterMultiplier = 0f;
-            public float samMultiplier = 0f;
-            public float scrapcopterMultiplier = 0f;
-            public float sedanMultiplier = 0f;
-            public float trapMultiplier = 0f;
-            public float vehicleMultiplier = 0f;
-            public float watchtowerMultiplier = 0f;
+            // Legacy
+            public float entityCupboardMultiplier;
+            public float twigMultiplier;
+            public float woodMultiplier;
+            public float stoneMultiplier;
+            public float sheetMultiplier;
+            public float armoredMultiplier;
+            public float baloonMultiplier;
+            public float barricadeMultiplier;
+            public float bbqMultiplier;
+            public float boatMultiplier;
+            public float boxMultiplier;
+            public float campfireMultiplier;
+            public float deployablesMultiplier;
+            public float furnaceMultiplier;
+            public float highWoodWallMultiplier;
+            public float highStoneWallMultiplier;
+            public float horseMultiplier;
+            public float minicopterMultiplier;
+            public float samMultiplier;
+            public float scrapcopterMultiplier;
+            public float sedanMultiplier;
+            public float trapMultiplier;
+            public float vehicleMultiplier;
+            public float watchtowerMultiplier;
         }
 
         protected override void LoadDefaultConfig()
@@ -1023,7 +1055,17 @@ namespace Oxide.Plugins
             Puts("Creating new config file");
             configData = new ConfigData
             {
-                Version = Version,
+                Debug = new Debug(),
+                Global = new Global()
+                {
+                    protectedDays = 0,
+                    cupboardRange = 30f,
+                    DestroyOnZero = true,
+                    disableWarning = true,
+                    protectVehicleOnLift = true,
+                    protectedDisplayTime = 4400,
+                    warningTime = 10
+                },
                 multipliers = new SortedDictionary<string, float>()
                 {
                     { "armored", 0f },
@@ -1051,12 +1093,13 @@ namespace Oxide.Plugins
                     { "watchtower", 0f },
                     { "wood", 0f },
                     { "deployables", 0.1f } // For all others not listed
-                }
+                },
+                Version = Version
             };
             SaveConfig(configData);
         }
 
-        void LoadConfigValues()
+        private void LoadConfigValues()
         {
             configData = Config.ReadObject<ConfigData>();
 
@@ -1107,7 +1150,7 @@ namespace Oxide.Plugins
         {
             public static CuiElementContainer Container(string panel, string color, string min, string max, bool useCursor = false, string parent = "Overlay")
             {
-                CuiElementContainer container = new CuiElementContainer()
+                return new CuiElementContainer()
                 {
                     {
                         new CuiPanel
@@ -1120,8 +1163,8 @@ namespace Oxide.Plugins
                         panel
                     }
                 };
-                return container;
             }
+
             public static void Panel(ref CuiElementContainer container, string panel, string color, string min, string max, bool cursor = false)
             {
                 container.Add(new CuiPanel
@@ -1132,6 +1175,7 @@ namespace Oxide.Plugins
                 },
                 panel);
             }
+
             public static void Label(ref CuiElementContainer container, string panel, string color, string text, int size, string min, string max, TextAnchor align = TextAnchor.MiddleCenter)
             {
                 container.Add(new CuiLabel
@@ -1140,8 +1184,8 @@ namespace Oxide.Plugins
                     RectTransform = { AnchorMin = min, AnchorMax = max }
                 },
                 panel);
-
             }
+
             public static void Button(ref CuiElementContainer container, string panel, string color, string text, int size, string min, string max, string command, TextAnchor align = TextAnchor.MiddleCenter, string tcolor="FFFFFF")
             {
                 container.Add(new CuiButton
@@ -1152,6 +1196,7 @@ namespace Oxide.Plugins
                 },
                 panel);
             }
+
             public static void Input(ref CuiElementContainer container, string panel, string color, string text, int size, string command, string min, string max)
             {
                 container.Add(new CuiElement
@@ -1175,6 +1220,7 @@ namespace Oxide.Plugins
                     }
                 });
             }
+
             public static void Icon(ref CuiElementContainer container, string panel, string color, string imageurl, string min, string max)
             {
                 container.Add(new CuiElement
@@ -1197,6 +1243,7 @@ namespace Oxide.Plugins
                     }
                 });
             }
+
             public static string Color(string hexColor, float alpha)
             {
                 if (hexColor.StartsWith("#"))
