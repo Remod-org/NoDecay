@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.36", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
+    [Info("NoDecay", "RFC1920", "1.0.37", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb and Diesel_42o
     [Description("Scales or disables decay of items")]
 
     class NoDecay : RustPlugin
@@ -206,7 +206,7 @@ namespace Oxide.Plugins
                         entity.LookupPrefab().name.Contains("bars") ||
                         entity.LookupPrefab().name.Contains("shutter") ||
                         entity.LookupPrefab().name.Contains("netting") ||
-                        entity.LookupPrefab().name.Contains("door") ||
+                        (entity.LookupPrefab().name.Contains("door") && !entity.LookupPrefab().name.Contains("doorway")) ||
                         entity.LookupPrefab().name.Contains("hatch") ||
                         entity.LookupPrefab().name.Contains("garagedoor") ||
                         entity.LookupPrefab().name.Contains("cell") ||
@@ -398,6 +398,7 @@ namespace Oxide.Plugins
             string type = "other";
             bool hascup = true; // Assume true (has cupboard or we don't care)
 
+            OutputRcon($"NoDecay checking for block damage to {block.LookupPrefab().name}");
             if(c_requireCupboard == true)
             {
                 // Verify that we should check for a cupboard and ensure that one exists.
@@ -449,6 +450,10 @@ namespace Oxide.Plugins
                     case BuildingGrade.Enum.TopTier:
                         multiplier = c_armoredMultiplier;
                         type = "armored";
+                        break;
+                    default:
+                        OutputRcon($"Decay ({type}) has unknown grade type.");
+                        type = "unknown";
                         break;
                 }
             }
