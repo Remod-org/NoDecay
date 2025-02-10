@@ -24,12 +24,13 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Oxide.Core;
+using Oxide.Core.Libraries.Covalence;
 using Oxide.Core.Plugins;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.57", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.58", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -42,6 +43,7 @@ namespace Oxide.Plugins
         #region main
         public static readonly FieldInfo nextProtectedCalcTime = typeof(BuildingPrivlidge).GetField("nextProtectedCalcTime", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
         public static readonly FieldInfo cachedProtectedMinutes = typeof(BuildingPrivlidge).GetField("cachedProtectedMinutes", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+        private Dictionary<string, long> lastConnected = new Dictionary<string, long>();
 
         [PluginReference]
         private readonly Plugin JPipes;//, MyMiniCopter;
@@ -50,6 +52,7 @@ namespace Oxide.Plugins
         {
             permission.RegisterPermission("nodecay.use", this);
             permission.RegisterPermission("nodecay.admin", this);
+            LoadData();
         }
 
         void OnServerInitialized()
@@ -70,6 +73,30 @@ namespace Oxide.Plugins
 
         void Loaded() => LoadConfigValues();
 
+        void OnUserConnected(IPlayer player) => OnUserDisconnected(player);
+        void OnUserDisconnected(IPlayer player)
+        {
+            long lc = 0;
+            lastConnected.TryGetValue(player.Id, out lc);
+            if(lc > 0)
+            {
+                lastConnected[player.Id] = ToEpochTime(DateTime.UtcNow);
+            }
+            else
+            {
+                lastConnected.Add(player.Id, ToEpochTime(DateTime.UtcNow));
+            }
+            SaveData();
+        }
+
+        private void LoadData()
+        {
+            lastConnected = Interface.Oxide.DataFileSystem.ReadObject<Dictionary<string, long>>(Name + "/lastconnected");
+        }
+        private void SaveData()
+        {
+            Interface.Oxide.DataFileSystem.WriteObject(Name + "/lastconnected", lastConnected);
+        }
         // Workaround for car chassis that won't die
         private void OnEntityDeath(ModularCar car, HitInfo hitinfo)
         {
@@ -116,6 +143,25 @@ namespace Oxide.Plugins
                 {
                     OutputRcon($"{entity_name} owner {owner} does NOT have NoDecay permission.  Standard decay in effect.");
                     return null;
+                }
+            }
+            if(configData.Global.protectedDays > 0 && entity.OwnerID > 0)
+            {
+                long lc = 0;
+                lastConnected.TryGetValue(entity.OwnerID.ToString(), out lc);
+                if (lc > 0)
+                {
+                    long now = ToEpochTime(DateTime.UtcNow);
+                    float days = Math.Abs((now - lc) / 86400);
+                    if (days > configData.Global.protectedDays)
+                    {
+                        OutputRcon($"Allowing decay for owner offline for {configData.Global.protectedDays.ToString()} days");
+                        return null;
+                    }
+                    else
+                    {
+                        OutputRcon($"Owner was last connected {days.ToString()} days ago and is still protected...");
+                    }
                 }
             }
 
@@ -572,6 +618,7 @@ namespace Oxide.Plugins
 
                     info += "\n\n\tEnabled: " + enabled.ToString();
                     info += "\n\tdisableWarning: " + configData.Global.disableWarning.ToString();
+                    info += "\n\tprotectedDays: " + configData.Global.protectedDays.ToString();
                     info += "\n\tprotectVehicleOnLift: " + configData.Global.protectVehicleOnLift.ToString();
                     info += "\n\tusePermission: " + configData.Global.usePermission.ToString();
                     info += "\n\trequireCupboard: " + configData.Global.requireCupboard.ToString();
@@ -591,6 +638,15 @@ namespace Oxide.Plugins
         #endregion
 
         #region helpers
+        // From PlayerDatabase
+        private long ToEpochTime(DateTime dateTime)
+        {
+            var date = dateTime.ToUniversalTime();
+            var ticks = date.Ticks - new DateTime(1970, 1, 1, 0, 0, 0, 0).Ticks;
+            var ts = ticks / TimeSpan.TicksPerSecond;
+            return ts;
+        }
+
         [HookMethod("SendHelpText")]
         private void SendHelpText(BasePlayer player)
         {
@@ -650,6 +706,7 @@ namespace Oxide.Plugins
             public bool usePermission = false;
             public bool requireCupboard = false;
             public bool cupboardCheckEntity = false;
+            public float protectedDays = 0;
             public float cupboardRange = 30f;
             public bool DestroyOnZero = true;
             public bool useJPipes = false;
