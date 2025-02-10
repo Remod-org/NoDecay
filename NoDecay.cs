@@ -27,7 +27,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.63", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.64", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -189,10 +189,15 @@ namespace Oxide.Plugins
                     // Main check for non-building entities/deployables
                     foreach (KeyValuePair<string, List<string>> entities in entityinfo)
                     {
+                        //private Dictionary<string, List<string>> entityinfo = new Dictionary<string, List<string>>();
                         if (entities.Value.Contains(entity_name))
                         {
-                            damageAmount = before * configData.multipliers[entities.Key];
-                            break;
+                            OutputRcon($"Found {entity_name} listed in {entities.Key}");
+                            if (configData.multipliers.ContainsKey(entities.Key))
+                            {
+                                damageAmount = before * configData.multipliers[entities.Key];
+                                break;
+                            }
                         }
                     }
                 }
