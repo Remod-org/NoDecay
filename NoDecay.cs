@@ -5,7 +5,7 @@ using Oxide.Core.Plugins;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "Diesel_42o", "1.0.31", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb
+    [Info("NoDecay", "Diesel_42o", "1.0.32", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb
     [Description("Scales or disables decay of items")]
 
     class NoDecay : RustPlugin
@@ -24,11 +24,12 @@ namespace Oxide.Plugins
         private float c_deployablesMultiplier;
         private float c_boxMultiplier;
         private float c_sedanMultiplier;
-		private float c_samMultiplier;
-		private float c_baloonMultiplier;
+        private float c_samMultiplier;
+        private float c_baloonMultiplier;
         private float c_furnaceMultiplier;
         private float c_bbqMultiplier;
         private float c_boatMultiplier;
+        private float c_minicopterMultiplier;
         private float c_watchtowerMultiplier;
 
         private bool c_outputToRcon;
@@ -52,16 +53,17 @@ namespace Oxide.Plugins
             c_watchtowerMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "watchtowerMultiplier", 0.0));
             c_boxMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "boxMultiplier", 0.0));
             c_sedanMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "sedanMultiplier", 0.0));
-			c_baloonMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "baloonMultiplier", 0.0));
+            c_baloonMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "baloonMultiplier", 0.0));
             c_furnaceMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "furnaceMultiplier", 0.0));
             c_bbqMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "bbqMultiplier", 0.0));
-			c_samMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "samMultiplier", 0.0));
+            c_samMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "samMultiplier", 0.0));
             c_campfireMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "campfireMultiplier", 0.0));
             c_barricadeMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "barricadesMultiplier", 0.0));
             c_trapMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "trapMultiplier", 0.0));
             c_highWoodWallMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "highWoodWallMultiplier", 0.0));
             c_highStoneWallMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "highStoneWallMultiplier", 0.0));
             c_boatMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "boatMultiplier", 0.0));
+            c_minicopterMultiplier = Convert.ToSingle(GetConfigValue("Mutipliers", "minicopterMultiplier", 0.0));
 
             c_outputToRcon = Convert.ToBoolean(GetConfigValue("Debug", "outputToRcon", false));
 
@@ -164,7 +166,7 @@ namespace Oxide.Plugins
                     if (c_outputToRcon)
                         Puts($"Decay ({entity_name}) before: {before} after: {hitInfo.damageTypes.Get(Rust.DamageType.Decay)}");
                 }
-				else if (entity.LookupPrefab().name == "SAM_Static")
+                else if (entity.LookupPrefab().name == "SAM_Static")
                 {
                     var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
                     hitInfo.damageTypes.Scale(Rust.DamageType.Decay, c_samMultiplier);
@@ -172,7 +174,7 @@ namespace Oxide.Plugins
                     if (c_outputToRcon)
                         Puts($"Decay ({entity_name}) before: {before} after: {hitInfo.damageTypes.Get(Rust.DamageType.Decay)}");
                 }
-				else if (entity.LookupPrefab().name == "HotAirBalloon")
+                else if (entity.LookupPrefab().name == "HotAirBalloon")
                 {
                     var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
                     hitInfo.damageTypes.Scale(Rust.DamageType.Decay, c_baloonMultiplier);
@@ -271,6 +273,15 @@ namespace Oxide.Plugins
                 {
                     var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
                     hitInfo.damageTypes.Scale(Rust.DamageType.Decay, c_boatMultiplier);
+
+                    if (c_outputToRcon)
+                        Puts($"Decay ({entity_name}) before: {before} after: {hitInfo.damageTypes.Get(Rust.DamageType.Decay)}");
+                }
+                else if (entity.LookupPrefab().name == "minicopter.entity")
+
+                {
+                    var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
+                    hitInfo.damageTypes.Scale(Rust.DamageType.Decay, c_minicopterMultiplier);
 
                     if (c_outputToRcon)
                         Puts($"Decay ({entity_name}) before: {before} after: {hitInfo.damageTypes.Get(Rust.DamageType.Decay)}");
