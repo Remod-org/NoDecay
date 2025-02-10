@@ -30,7 +30,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.61", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.62", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -271,7 +271,7 @@ namespace Oxide.Plugins
                     damageAmount = before * configData.Multipliers.highStoneWallMultiplier;
                 }
                 else if (entity_name.Equals("gates.external.high.wood") || entity_name.Equals("wall.external.high.wood") ||
-                    entity_name.Equals("icewall") || entity_name.Equals("wall.external.high.ice"))
+                    entity_name.Equals("IceWall") || entity_name.Equals("icewall") || entity_name.Equals("wall.external.high.ice"))
                 {
                     damageAmount = before * configData.Multipliers.highWoodWallMultiplier;
                 }
