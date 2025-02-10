@@ -7,6 +7,8 @@ This is the official release of NoDecay.  Any other versions out there are forks
 
 The default configuration does **NOT** affect *Twig decay* but nullifies all damage on all other items.
 
+ **As for version 1.0.89** items can heal.  Thanks to jozzo402 on github for the suggestion.
+
  **As of version 1.0.68** users can enable or disable NoDecay for their owned entities
 
  **As of version 1.0.34** you can optionally also check for the presence of a deployed tool cupboard. Set requireCupboard to true. This will check for an attached cupboard for building blocks and a nearby cupboard for entities. For entities, use "cupboardCheckEntity: true" and "cupboardRange: number" to configure how far the entities can be from a cupboard before they will decay. The default is 30 game meters (?), which may or may not be enough for your needs. Adjust as desired.
