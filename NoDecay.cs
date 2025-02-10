@@ -31,7 +31,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.83", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.84", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -145,7 +145,7 @@ namespace Oxide.Plugins
         {
             CuiHelper.DestroyUi(player, TCOVR);
 
-            CuiElementContainer container = UI.Container(TCOVR, UI.Color("3E3C37", 1f), "0.651 0.5", "0.946 0.532", true, "Overlay");
+            CuiElementContainer container = UI.Container(TCOVR, UI.Color("3E3C37", 1f), "0.651 0.5", "0.946 0.535", true, "Overlay");
             UI.Label(ref container, TCOVR, UI.Color("#cacaca", 1f), Lang("protby"), 14, "0 0", "1 1");
 
             CuiHelper.AddUi(player, container);
@@ -1227,12 +1227,13 @@ namespace Oxide.Plugins
             {
                 configData.Global.overrideZoneManager = new List<string>() { "vehicle", "balloon" };
             }
-            if (configData.Version < new VersionNumber(1, 0, 81))
+            if (configData.Version < new VersionNumber(1, 0, 81) && configData.Global.protectedDisplayTime == 4400)
             {
-                if (configData.Global.protectedDisplayTime == 4400)
-                {
-                    configData.Global.protectedDisplayTime = 44000;
-                }
+                configData.Global.protectedDisplayTime = 44000;
+            }
+            if (!configData.multipliers.ContainsKey("attackcopter"))
+            {
+                configData.multipliers.Add("attackcopter", 0);
             }
             configData.Version = Version;
 
