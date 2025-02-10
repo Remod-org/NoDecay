@@ -32,7 +32,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.91", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.93", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -111,30 +111,30 @@ namespace Oxide.Plugins
         private void OnServerInitialized()
         {
             // Workaround for no decay on horses, even if set to decay here
-            if (configData.multipliers["horse"] > 0)
-            {
-                float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
+            //if (configData.multipliers["horse"] > 0)
+            //{
+            //    float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
 
-                foreach (RidableHorse horse in Resources.FindObjectsOfTypeAll<RidableHorse>())
-                {
-                    if (horse.net == null) continue;
-                    if (horse.IsHitched() || horse.IsDestroyed) continue;
+            //    foreach (RidableHorse2 horse in Resources.FindObjectsOfTypeAll<RidableHorse2>())
+            //    {
+            //        if (horse.net == null) continue;
+            //        if (horse.IsHitched() || horse.IsDestroyed) continue;
 
-                    if (newdecaytime > 0)
-                    {
-                        DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-                        horse.AddDecayDelay(newdecaytime);
-                    }
-                    else
-                    {
-                        DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-                        //horse.nextDecayTime = Time.time + newdecaytime;
-                        horse.AddDecayDelay(newdecaytime);
-                    }
+            //        if (newdecaytime > 0)
+            //        {
+            //            DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
+            //            horse.AddDecayDelay(newdecaytime);
+            //        }
+            //        else
+            //        {
+            //            DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
+            //            //horse.nextDecayTime = Time.time + newdecaytime;
+            //            horse.AddDecayDelay(newdecaytime);
+            //        }
 
-                    horse.SetDecayActive(true);
-                }
-            }
+            //        horse.SetDecayActive(true);
+            //    }
+            //}
         }
 
         private object CanLootEntity(BasePlayer player, StorageContainer container)
@@ -468,27 +468,27 @@ namespace Oxide.Plugins
             }
         }
 
-        private void OnEntitySpawned(RidableHorse horse)
+        private void OnEntitySpawned(RidableHorse2 horse)
         {
             // Workaround for no decay on horses, even if set to decay here
-            if (horse == null) return;
-            if (horse.net == null) return;
+            //if (horse == null) return;
+            //if (horse.net == null) return;
 
-            if (configData.multipliers["horse"] > 0)
-            {
-                float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
-                if (newdecaytime > 0)
-                {
-                    DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-                    horse.AddDecayDelay(newdecaytime);
-                }
-                else
-                {
-                    DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-                    horse.AddDecayDelay(newdecaytime);
-                }
-                horse.SetDecayActive(true);
-            }
+            //if (configData.multipliers["horse"] > 0)
+            //{
+            //    float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
+            //    if (newdecaytime > 0)
+            //    {
+            //        DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
+            //        horse.AddDecayDelay(newdecaytime);
+            //    }
+            //    else
+            //    {
+            //        DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
+            //        horse.AddDecayDelay(newdecaytime);
+            //    }
+            //    horse.SetDecayActive(true);
+            //}
         }
 
         // Workaround for car chassis that won't die
