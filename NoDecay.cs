@@ -28,7 +28,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.54", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.55", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -205,7 +205,7 @@ namespace Oxide.Plugins
                 {
                     damageAmount = 0.0f;
                 }
-                else if (entity_name == "Rowboat" || entity_name == "RHIB")
+                else if (entity_name == "Rowboat" || entity_name == "RHIB" || entity_name == "Kayak")
                 {
                     damageAmount = before * configData.Multipliers.boatMultiplier;
                     mundane = true;
