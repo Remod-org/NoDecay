@@ -624,6 +624,7 @@ namespace Oxide.Plugins
                     {
                         enabled = !enabled;
                         Message(iplayer, "ndstatus", enabled.ToString());
+                        SaveConfig();
                     }
                     else if (args[0] == "log")
                     {
@@ -681,6 +682,7 @@ namespace Oxide.Plugins
                     }
                 }
             }
+            if (iplayer.Id == "server_console") return;
             if (args.Length > 0)
             {
                 bool save = false;
@@ -719,6 +721,60 @@ namespace Oxide.Plugins
                 }
                 if (save) SaveData();
             }
+        }
+        #endregion
+
+        #region inbound_hooks
+        // Returns player status if playerid > 0
+        // Returns global enabled status if playerid == 0
+        private bool NoDecayGet(ulong playerid=0)
+        {
+            if (playerid > 0)
+            {
+                if (disabled.Contains(playerid))
+                {
+                    return false;
+                }
+                return true;
+            }
+
+            if (enabled)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        // Sets player status if playerid > 0
+        // Sets global status if playerid == 0
+        private object NoDecaySet(ulong playerid=0, bool status=true)
+        {
+            if (playerid > 0)
+            {
+                if (status)
+                {
+                    if (disabled.Contains(playerid))
+                    {
+                        disabled.Remove(playerid);
+                    }
+                }
+                else
+                {
+                    if (!disabled.Contains(playerid))
+                    {
+                        disabled.Add(playerid);
+                    }
+                }
+                SaveData();
+                return null;
+            }
+            else
+            {
+                enabled = status;
+                SaveConfig();
+            }
+
+            return null;
         }
         #endregion
 
