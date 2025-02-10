@@ -43,7 +43,7 @@ namespace Oxide.Plugins
         public static readonly FieldInfo cachedProtectedMinutes = typeof(BuildingPrivlidge).GetField("cachedProtectedMinutes", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
 
         [PluginReference]
-        private readonly Plugin JPipes;
+        private readonly Plugin JPipes;//, MyMiniCopter;
 
         void Init()
         {
@@ -212,6 +212,7 @@ namespace Oxide.Plugins
                 }
                 else if(entity_name == "minicopter.entity")
                 {
+                    //if (MyMiniCopter) return null;
                     damageAmount = before * configData.Multipliers.minicopterMultiplier;
                     mundane = true;
                 }
@@ -225,7 +226,13 @@ namespace Oxide.Plugins
                     damageAmount = before * configData.Multipliers.scrapcopterMultiplier;
                     mundane = true;
                 }
-                else if(entity_name == "BaseVehicle" || entity.name.Contains("vehicle.chassis") || entity.name.Contains("1module_") || entity.name.Contains("2module_") || entity.name.Contains("3module_") || entity.name.Contains("4module_"))
+                else if(entity_name == "BaseVehicle" ||
+                    entity.name.Contains("vehicle.chassis") ||
+                    entity.name.Contains("chassis_") ||
+                    entity.name.Contains("1module_") ||
+                    entity.name.Contains("2module_") ||
+                    entity.name.Contains("3module_") ||
+                    entity.name.Contains("4module_"))
                 {
                     damageAmount = before * configData.Multipliers.vehicleMultiplier;
                     mundane = true;
