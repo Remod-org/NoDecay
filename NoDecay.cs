@@ -30,7 +30,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.59", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.60", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     //Thanks to Steenamaroo for his help and support
@@ -151,6 +151,7 @@ namespace Oxide.Plugins
             float damageAmount = 0f;
             DateTime tick = DateTime.Now;
             string entity_name = entity.LookupPrefab().name;
+//            Puts($"Decay Entity: {entity_name}");
             string owner = entity.OwnerID.ToString();
             bool mundane = false;
             bool isBlock = false;
@@ -212,35 +213,33 @@ namespace Oxide.Plugins
                     damageAmount = ProcessBuildingDamage(entity, before);
                     isBlock = true;
                 }
-                else if (entity_name == "campfire" || entity_name == "skull_fire_pit")
+                else if (entity_name.Equals("campfire") || entity_name.Equals("skull_fire_pit"))
                 {
                     damageAmount = before * configData.Multipliers.campfireMultiplier;
                 }
-                else if (entity_name == "box.wooden.large" ||
-                     entity_name == "woodbox_deployed" ||
-                     entity_name == "CoffinStorage")
+                else if (entity_name.Equals("box.wooden.large") ||
+                     entity_name.Equals("woodbox_deployed") ||
+                     entity_name.Equals("CoffinStorage"))
                 {
                     damageAmount = before * configData.Multipliers.boxMultiplier;
                 }
-                else if (entity_name.Contains("deployed") ||
-                     entity_name.Contains("reinforced") ||
-                     entity_name.Contains("shopfront") ||
-                     entity_name.Contains("bars") ||
-                     entity_name.Contains("shutter") ||
-                     entity_name.Contains("netting") ||
+                else if (entity_name.Contains("deployed"))
+                {
+                    damageAmount = before * configData.Multipliers.deployablesMultiplier;
+                }
+                else if(entity_name.Contains("shutter") ||
                      (entity_name.Contains("door") && !entity_name.Contains("doorway")) ||
-                     entity_name.Contains("hatch") ||
-                     entity_name.Contains("garagedoor") ||
-                     entity_name.Contains("cell") ||
-                     entity_name.Contains("fence") ||
-                     entity_name.Contains("grill") ||
-                     entity_name.Contains("Candle") ||
-                     entity_name.Contains("candle") ||
-                     entity_name.Contains("Strobe") ||
-                     entity_name.Contains("speaker") ||
-                     entity_name.Contains("Fog") ||
-                     entity_name.Contains("composter") ||
-                     entity_name.Contains("Graveyard"))
+                     entity_name.Contains("reinforced") || entity_name.Contains("shopfront") ||
+                     entity_name.Contains("bars") || entity_name.Contains("netting") ||
+                     entity_name.Contains("hatch") || entity_name.Contains("garagedoor") ||
+                     entity_name.Contains("cell") || entity_name.Contains("fence") ||
+                     entity_name.Contains("grill") ||  entity_name.Contains("speaker") ||
+                     entity_name.Contains("strobe") ||  entity_name.Contains("Strobe") ||
+                     entity_name.Contains("fog") ||  entity_name.Contains("Fog") ||
+                     entity_name.Equals("wall.frame.shopfront.metal.static") || entity_name.Equals("wall.frame.shopfront") ||
+                     entity_name.Equals("wall.window.bars.metal") || entity_name.Equals("candle") ||
+                     entity_name.Equals("hatchet.entity") || entity_name.Equals("stonehatchet.entity") ||
+                     entity_name.Equals("door.hinged.garage_a"))
                 {
                     damageAmount = before * configData.Multipliers.deployablesMultiplier;
                 }
@@ -252,32 +251,32 @@ namespace Oxide.Plugins
                 {
                     damageAmount = before * configData.Multipliers.sedanMultiplier;
                 }
-                else if (entity_name == "SAM_Static")
+                else if (entity_name.Equals("SAM_Static"))
                 {
                     damageAmount = before * configData.Multipliers.samMultiplier;
                 }
-                else if (entity_name == "HotAirBalloon")
+                else if (entity_name.Equals("HotAirBalloon"))
                 {
                     damageAmount = before * configData.Multipliers.baloonMultiplier;
                     mundane = true;
                 }
-                else if (entity_name == "BBQ.Deployed")
+                else if (entity_name.Equals("BBQ.Deployed"))
                 {
                     damageAmount = before * configData.Multipliers.bbqMultiplier;
                 }
-                else if (entity_name.Contains("watchtower"))
+                else if (entity_name.Equals("watchtower.wood"))
                 {
                     damageAmount = before * configData.Multipliers.watchtowerMultiplier;
                 }
-                else if (entity_name == "WaterBarrel" ||
-                        entity_name.Contains("jackolantern") ||
-                        entity_name.Contains("water_catcher"))
+                else if (entity_name.Equals("WaterBarrel") ||
+                        entity_name.Equals("jackolantern.angry") || entity_name.Equals("jackolantern.happy") ||
+                        entity_name.Equals("water_catcher_small") || entity_name.Equals("water_catcher_large"))
                 {
                     damageAmount = before * configData.Multipliers.deployablesMultiplier;
                 }
-                else if (entity_name == "beartrap" ||
-                        entity_name == "landmine" ||
-                        entity_name == "spikes.floor")
+                else if (entity_name.Equals("beartrap") ||
+                        entity_name.Equals("landmine") ||
+                        entity_name.Equals("spikes.floor"))
                 {
                     damageAmount = before * configData.Multipliers.trapMultiplier;
                 }
@@ -285,40 +284,41 @@ namespace Oxide.Plugins
                 {
                     damageAmount = before * configData.Multipliers.barricadeMultiplier;
                 }
-                else if (entity_name == "gates.external.high.stone" || entity_name == "wall.external.high.stone")
+                else if (entity_name.Equals("gates.external.high.stone") || entity_name.Equals("wall.external.high.stone"))
                 {
                     damageAmount = before * configData.Multipliers.highStoneWallMultiplier;
                 }
-                else if (entity_name == "gates.external.high.wood" || entity_name == "wall.external.high.wood")
+                else if (entity_name.Equals("gates.external.high.wood") || entity_name.Equals("wall.external.high.wood") ||
+                    entity_name.Equals("icewall") || entity_name.Equals("wall.external.high.ice"))
                 {
                     damageAmount = before * configData.Multipliers.highWoodWallMultiplier;
                 }
-                else if (entity_name == "mining.pumpjack")
+                else if (entity_name.Equals("mining.pumpjack"))
                 {
                     damageAmount = 0.0f;
                 }
-                else if (entity_name == "Rowboat" || entity_name == "RHIB" || entity_name == "Kayak")
+                else if (entity_name.Equals("Rowboat") || entity_name.Equals("RHIB") || entity_name.Equals("Kayak"))
                 {
                     damageAmount = before * configData.Multipliers.boatMultiplier;
                     mundane = true;
                 }
-                else if (entity_name == "minicopter.entity")
+                else if (entity_name.Equals("minicopter.entity"))
                 {
                     //if (MyMiniCopter) return null;
                     damageAmount = before * configData.Multipliers.minicopterMultiplier;
                     mundane = true;
                 }
-                else if (entity_name.Contains("RidableHorse"))
+                else if (entity_name.Equals("RidableHorse") || entity_name.Equals("TestRidableHorse"))
                 {
                     damageAmount = before * configData.Multipliers.horseMultiplier;
                     mundane = true;
                 }
-                else if (entity_name == "ScrapTransportHelicopter")
+                else if (entity_name.Equals("ScrapTransportHelicopter"))
                 {
                     damageAmount = before * configData.Multipliers.scrapcopterMultiplier;
                     mundane = true;
                 }
-                else if (entity_name == "BaseVehicle" ||
+                else if (entity_name.Equals("BaseVehicle") ||
                     entity.name.Contains("vehicle.chassis") ||
                     entity.name.Contains("chassis_") ||
                     entity.name.Contains("1module_") ||
