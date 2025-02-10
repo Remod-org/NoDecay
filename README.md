@@ -31,6 +31,7 @@ NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46. 
     "usePermission": false,
     "DestroyOnZero": true,
     "disableWarning": true,
+    "protectedDays": 0.0,
     "protectVehicleOnLift": true,
     "warningTime": 10.0
   },
@@ -99,6 +100,9 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
 
  Set protectVehicleOnLift true if you want to prevent decay for vehicles on a lift.  This should bypass the vehicleMultiplier.
 
+ If protectedDays is set to any value other than zero, player buildings, etc. will only be protected if the user has been online sometime within that number of days.
+
+ If usePlayerDatabase is true, and the plugin is available, the last connected time will be taken from that plugin.  Otherwise, we save that information in a new data file, ngpve_lastconnected.
  Set warningTime to a number greater than the default of 10.0 (ms) to limit the warnings fired off due to time to execute.  If your logs are consistently being filled with messages like the following:
 
      "(17:04:31) | [NoDecay] NoDecay.OnEntityTakeDamage on Rowboat took 15.04 ms to execute."
@@ -116,6 +120,7 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
 
 ### Commands
     - `nodecay log` -- Toggle logging of debug info to oxide log and rcon
+    - `nodecay logm` -- Toggle logging of mundane debug info to oxide log and rcon
     - `nodecay info` -- Display current configuration (must still set manually and reload)
 
 ### Credits
