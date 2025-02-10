@@ -5,7 +5,7 @@ using Oxide.Core.Plugins;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "Diesel_42o", "1.0.28", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb
+    [Info("NoDecay", "Diesel_42o", "1.0.29", ResourceId = 1160)]  //Original Credit to Deicide666ra/Piarb
     [Description("Scales or disables decay of items")]
 
     class NoDecay : RustPlugin
@@ -135,7 +135,7 @@ namespace Oxide.Plugins
                         entity.LookupPrefab().name.Contains("Candle") ||
                         entity.LookupPrefab().name.Contains("Strobe") ||
                         entity.LookupPrefab().name.Contains("speaker") ||
-                        entity.LookupPrefab().name.Contains("fog") ||
+                        entity.LookupPrefab().name.Contains("Fog") ||
                         entity.LookupPrefab().name.Contains("Graveyard"))
                 {
                     var before = hitInfo.damageTypes.Get(Rust.DamageType.Decay);
