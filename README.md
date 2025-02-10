@@ -29,7 +29,10 @@ NOTE: The long-standing misspelling of Multipliers has been fixed as of 1.0.46. 
     "cupboardCheckEntity": false,
     "cupboardRange": 30.0,
     "usePermission": false,
-    "DestroyOnZero": true
+    "DestroyOnZero": true,
+    "disableWarning": true,
+    "protectVehicleOnLift": true,
+    "warningTime": 10.0
   },
   "Multipliers": {
     "entityCupboardMultiplier": 0.0,
@@ -91,6 +94,14 @@ If "blockCupboardArmor" is set to true, blocks HQM from being added to a cupboar
  Use "entityCupboardMultiplier" to set the amount of decay for entities in cupboard range.
  
  Set DestroyOnZero to true to enable destroying entities when health is zero.
+
+ Set useJPipes if you have JPipes installed to ensure no decay for JPipes if NoDecay is configured with zero Multiplier for the JPipe building grade.
+
+ Set protectVehicleOnLift true if you want to prevent decay for vehicles on a lift.  This should bypass the vehicleMultiplier.
+
+ Set warningTime to a number greater than the default of 10.0 (ms) to limit the warnings fired off due to time to execute.  If your logs are consistently being filled with messages like the following:
+
+     "(17:04:31) | [NoDecay] NoDecay.OnEntityTakeDamage on Rowboat took 15.04 ms to execute."
 
 #### A Few Notes About Multipliers, decay.tick, etc.
    For any config file multiplier, you can set to 0 to disable decay for that item, 1 for normal decay, or a higher number for faster decay.  In other words, anything below 1 is slower down to 0 which is no decay.  Anything above 1 increases the rate of decay for that item and, yes, you can set numbers higher than 1.
