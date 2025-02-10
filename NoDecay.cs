@@ -29,7 +29,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.69", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.70", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -119,7 +119,7 @@ namespace Oxide.Plugins
 
         private object CanLootEntity(BasePlayer player, StorageContainer container)
         {
-            if (!configData.Global.disableWarning) return null;
+            if (!configData.Global.disableLootWarning) return null;
             if (!player.IPlayer.HasPermission(permNoDecayUse) && configData.Global.usePermission) return null;
             if (container == null) return null;
             var privs = container.GetComponentInParent<BuildingPrivlidge>() ?? null;
@@ -130,7 +130,7 @@ namespace Oxide.Plugins
         }
         private void OnLootEntityEnd(BasePlayer player, BaseCombatEntity entity)
         {
-            if (!configData.Global.disableWarning) return;
+            if (!configData.Global.disableLootWarning) return;
             if (!player.IPlayer.HasPermission(permNoDecayUse) && configData.Global.usePermission) return;
             if (entity == null) return;
             var privs = entity.GetComponentInParent<BuildingPrivlidge>() ?? null;
@@ -983,6 +983,7 @@ namespace Oxide.Plugins
             public bool blockCupboardMetal = false;
             public bool blockCupboardArmor = false;
             public bool disableWarning = true;
+            public bool disableLootWarning = false;
             public bool protectVehicleOnLift = true;
             public float protectedDisplayTime = 4400;
             public double warningTime = 10;
