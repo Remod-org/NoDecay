@@ -1,4 +1,4 @@
-# NoDecay
+# NoDecay (Remod version)
 Scales or disables decay of items, and deployables 
 
 [Download](https://code.remod.org/NoDecay.cs)
