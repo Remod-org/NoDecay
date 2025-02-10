@@ -1,5 +1,23 @@
+#region License (MIT)
+/*
+Copyright RFC1920 <desolationoutpostpve@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+#endregion License Information (MIT)
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using Oxide.Core;
 using Oxide.Core.Plugins;
@@ -7,9 +25,10 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.47", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.48", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
-    // Thanks to Deicide666ra for allowing me to continue his work on this plugin
+    //Thanks to Deicide666ra for allowing me to continue his work on this plugin
+    //Thanks to Steenamaroo for his help and support
     [Description("Scales or disables decay of items")]
     class NoDecay : RustPlugin
     {
@@ -17,10 +36,28 @@ namespace Oxide.Plugins
         private bool enabled = true;
 
         #region main
+        public static readonly FieldInfo nextProtectedCalcTime = typeof(BuildingPrivlidge).GetField("nextProtectedCalcTime", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+        public static readonly FieldInfo cachedProtectedMinutes = typeof(BuildingPrivlidge).GetField("cachedProtectedMinutes", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+
         void Init()
         {
             permission.RegisterPermission("nodecay.use", this);
             permission.RegisterPermission("nodecay.admin", this);
+        }
+
+        void OnServerInitialized()
+        {
+            if (!configData.Global.disableWarning) return;
+            foreach (BuildingPrivlidge priv in UnityEngine.Object.FindObjectsOfType<BuildingPrivlidge>())
+            {
+                if (priv == null) return;
+                if ((permission.UserHasPermission(priv.OwnerID.ToString(), "nodecay.use") && configData.Global.usePermission) || !configData.Global.usePermission)
+                {
+                    nextProtectedCalcTime.SetValue(priv, Time.realtimeSinceStartup * 2f);
+                    cachedProtectedMinutes.SetValue(priv, 1000000000);
+                    priv.SendNetworkUpdateImmediate();
+                }
+            }
         }
 
         void Loaded() => LoadConfigValues();
@@ -166,6 +203,11 @@ namespace Oxide.Plugins
                 else if(entity_name == "ScrapTransportHelicopter")
                 {
                     damageAmount = before * configData.Multipliers.scrapcopterMultiplier;
+                    mundane = true;
+                }
+                else if(entity_name == "BaseVehicle")
+                {
+                    damageAmount = before * configData.Multipliers.vehicleMultiplier;
                     mundane = true;
                 }
                 else
@@ -339,44 +381,74 @@ namespace Oxide.Plugins
             return false;
         }
 
+        void OnEntitySpawned(BuildingPrivlidge priv)
+        {
+            OutputRcon("OnEntitySpawned called for TC");
+            if (!configData.Global.disableWarning) return;
+            timer.Repeat(0.05f, 40, () =>
+            {
+                if (priv == null) return;
+                if ((permission.UserHasPermission(priv.OwnerID.ToString(), "nodecay.use") && configData.Global.usePermission) || !configData.Global.usePermission)
+                {
+                    nextProtectedCalcTime.SetValue(priv, Time.realtimeSinceStartup * 2f);
+                    cachedProtectedMinutes.SetValue(priv, 65535);
+                    priv.SendNetworkUpdateImmediate();
+                }
+            });
+        }
+
         // Prevent players from adding building resources to cupboard if so configured
         private object CanMoveItem(Item item, PlayerInventory inventory, uint targetContainer, int targetSlot)
         {
-            if(!(configData.Global.blockCupboardResources || configData.Global.blockCupboardWood)) return null;
-            if(!(configData.Global.blockCupboardStone || configData.Global.blockCupboardMetal || configData.Global.blockCupboardArmor)) return null;
             if(item == null) return null;
             if(targetContainer == 0) return null;
-
+            if(targetSlot == 0) return null;
             ItemContainer container = inventory.FindContainer(targetContainer);
+
+            if (configData.Global.disableWarning)
+            {
+                timer.Repeat(0.05f, 40, () =>
+                {
+                    BuildingPrivlidge priv = item?.parent?.entityOwner?.GetComponent<BuildingPrivlidge>();
+                    if (priv == null) return;
+                    if ((permission.UserHasPermission(priv.OwnerID.ToString(), "nodecay.use") && configData.Global.usePermission) || !configData.Global.usePermission)
+                    {
+                        nextProtectedCalcTime.SetValue(priv, Time.realtimeSinceStartup * 2f);
+                        cachedProtectedMinutes.SetValue(priv, 65535);
+                        priv.SendNetworkUpdateImmediate();
+                    }
+                });
+            }
+
+            if (!(configData.Global.blockCupboardResources || configData.Global.blockCupboardWood)) return null;
+            if (!(configData.Global.blockCupboardStone || configData.Global.blockCupboardMetal || configData.Global.blockCupboardArmor)) return null;
 
             try
             {
                 var cup = container.entityOwner as BaseEntity;
+                if (!cup.name.Contains("cupboard.tool")) return null;
 
-                if(cup.name.Contains("cupboard.tool"))
+                string res = item?.info?.shortname;
+                if (res.Contains("wood") && configData.Global.blockCupboardWood)
                 {
-                    string res = item.info.shortname;
-                    if(res.Contains("wood") && configData.Global.blockCupboardWood)
-                    {
-                        OutputRcon($"Player tried to add {res} to a cupboard!");
-                        return false;
-                    }
-                    else if((res.Contains("stones") || res.Contains("metal.frag") || res.Contains("metal.refined")) && configData.Global.blockCupboardResources)
-                    {
-                        OutputRcon($"Player tried to add {res} to a cupboard!");
-                        return false;
-                    }
-                    else if(
-                        (res.Contains("stones") && configData.Global.blockCupboardStone)
-                        || (res.Contains("metal.frag") && configData.Global.blockCupboardMetal)
-                        || (res.Contains("metal.refined") && configData.Global.blockCupboardArmor))
-                    {
-                        OutputRcon($"Player tried to add {res} to a cupboard!");
-                        return false;
-                    }
+                    OutputRcon($"Player tried to add {res} to a cupboard!");
+                    return false;
+                }
+                else if ((res.Contains("stones") || res.Contains("metal.frag") || res.Contains("metal.refined")) && configData.Global.blockCupboardResources)
+                {
+                    OutputRcon($"Player tried to add {res} to a cupboard!");
+                    return false;
+                }
+                else if (
+                    (res.Contains("stones") && configData.Global.blockCupboardStone)
+                    || (res.Contains("metal.frag") && configData.Global.blockCupboardMetal)
+                    || (res.Contains("metal.refined") && configData.Global.blockCupboardArmor))
+                {
+                    OutputRcon($"Player tried to add {res} to a cupboard!");
+                    return false;
                 }
             }
-            catch {}
+            catch { }
             return null;
         }
         #endregion
@@ -424,9 +496,11 @@ namespace Oxide.Plugins
                     info += "\n\tscrapcopterMultiplier: " + configData.Multipliers.scrapcopterMultiplier.ToString();
                     info += "\n\tsedanMultiplier: " + configData.Multipliers.sedanMultiplier.ToString();
                     info += "\n\ttrapMultiplier: " + configData.Multipliers.trapMultiplier.ToString();
+                    info += "\n\tvehicleMultiplier: " + configData.Multipliers.vehicleMultiplier.ToString();
                     info += "\n\twatchtowerMultiplier: " + configData.Multipliers.watchtowerMultiplier.ToString();
 
                     info += "\n\n\tEnabled: " + enabled.ToString();
+                    info += "\n\tdisableWarning: " + configData.Global.disableWarning.ToString();
                     info += "\n\tusePermission: " + configData.Global.usePermission.ToString();
                     info += "\n\trequireCupboard: " + configData.Global.requireCupboard.ToString();
                     info += "\n\tCupboardEntity: " + configData.Global.cupboardCheckEntity.ToString();
@@ -511,6 +585,7 @@ namespace Oxide.Plugins
             public bool blockCupboardStone = false;
             public bool blockCupboardMetal = false;
             public bool blockCupboardArmor = false;
+            public bool disableWarning = true;
         }
 
         private class Multipliers
@@ -537,6 +612,7 @@ namespace Oxide.Plugins
             public float scrapcopterMultiplier = 0f;
             public float sedanMultiplier = 0f;
             public float trapMultiplier = 0f;
+            public float vehicleMultiplier = 0f;
             public float watchtowerMultiplier = 0f;
         }
 
@@ -554,6 +630,10 @@ namespace Oxide.Plugins
             if (configData.Version < new VersionNumber(1, 0, 47))
             {
                 configData.Multipliers.entityCupboardMultiplier = 0f;
+            }
+            if (configData.Version < new VersionNumber(1, 0, 48))
+            {
+                configData.Global.disableWarning = true;
             }
             configData.Version = Version;
 
