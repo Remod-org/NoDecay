@@ -7,6 +7,8 @@ This is the official release of NoDecay.  Any other versions out there are forks
 
 The default configuration does **NOT** affect *Twig decay* but nullifies all damage on all other items.
 
+ **As of version 1.0.94** A new config, EnableUpkeep was added.  If false, and the plugin is enabled, and the player has not disabled NoDecay, TC resources will not be used for upkeep.  This is a long-requested feature and is the reason why blocking resource storage was added years ago.  Set to true for the old default.  We may see issues with this, so I am hoping for feedback one way or the other.
+
  **As of version 1.0.89** items can heal.  Thanks to jozzo402 on github for the suggestion.
 
  **As of version 1.0.68** users can enable or disable NoDecay for their owned entities
@@ -19,7 +21,7 @@ The default configuration does **NOT** affect *Twig decay* but nullifies all dam
 
 <b>NOTE: The long-standing misspelling of Multipliers was fixed as of 1.0.46.  As of 1.0.86, Multipliers has been removed as well.  Only multipliers was actually in use since 1.0.63 but due to having the leave that upgrade in place, Multipliers was also still there.  Sorry for the confusion.</b>
 
-New for 1.0.87 - non building block building part such as doorways and doors, etc., now use the new building multiplier, which defaults to 0.  Previously, they were classified as deployables and were decaying at 10% by default.  Admins should run 'nodecay update' to reclassify them correctly, or wait until wipe.
+New for 1.0.87 - non building block building parts such as doorways and doors, etc., now use the new building multiplier, which defaults to 0.  Previously, they were classified as deployables and were decaying at 10% by default.  Admins should run 'nodecay update' to reclassify them correctly, or wait until wipe.
 
 
 ```json
@@ -31,24 +33,25 @@ New for 1.0.87 - non building block building part such as doorways and doors, et
   },
   "Global": {
     "usePermission": false,
-	"useTCOwnerToCheckPermission": false,
+    "useTCOwnerToCheckPermission": false,
     "useBPAuthListForProtectedDays": false,
+    "EnableGUI": true,
+    "EnableUpkeep": false,
     "requireCupboard": false,
     "cupboardCheckEntity": false,
     "protectedDays": 0.0,
     "cupboardRange": 30.0,
     "useCupboardRange": false,
     "DestroyOnZero": true,
-    "useJPipes": false,
     "honorZoneManagerFlag": false,
     "blockCupboardResources": false,
     "blockCupboardWood": false,
     "blockCupboardStone": false,
     "blockCupboardMetal": false,
     "blockCupboardArmor": false,
-	"healBuildings": false,
-	"healEntities": false,
-	"healPercentage": 0.01,
+    "healBuildings": false,
+    "healEntities": false,
+    "healPercentage": 0.01,
     "disableWarning": true,
     "disableLootWarning": false,
     "protectVehicleOnLift": true,
@@ -93,7 +96,7 @@ New for 1.0.87 - non building block building part such as doorways and doors, et
   "Version": {
     "Major": 1,
     "Minor": 0,
-    "Patch": 89
+    "Patch": 94
   }
 }
 ```
@@ -126,6 +129,10 @@ If "healEntities" is true, damaged entities will be healed over time.
 
 "healPercentage" determines how quickly entities and blocks will recover from damage.  Every decay.tick (default 600 seconds), NoDecay will heal the item by a percentage of max health.  If max health of an item is 500, and healthPercentage is 0.01, the item health will increase by 5 every decay.tick.
 
+Set EnableGUI to true to enable the previously always on overlay for the tool cupboard loot panel.
+
+Set EnableUpkeep to true to use stored resources for upkeep.  If false, players can keep resources in their TC without them being consumed. 
+
 Set requireCupboard to true to check for a cupboard to prevent decay.
 
 Set cupboardCheckEntity to also check for entities in range of cupboards (i.e. not just foundations, etc.  This should work on doors and high walls, etc.
@@ -140,8 +147,6 @@ Set cupboardCheckEntity to also check for entities in range of cupboards (i.e. n
  Set DestroyOnZero to true to enable destroying entities when health is zero.
 
  Set disableWarning to true to disable the "Building Decaying" warning.  This will be set to a default of 4400 minutes (73 hours) based on the value of protectedDisplayTime.  73 hours is enough to hit the default value shown for more than 72 hours of protection without NoDecay.  A warning will still be shown when viewing the contents of the TC.  But, as always, the building is protected anyway since that's what NoDecay is for.  Players may need to periodically open their TC to disable the warning again every couple of days.
-
- Set useJPipes if you have JPipes installed to ensure no decay for JPipes if NoDecay is configured with zero Multiplier for the JPipe building grade.
 
  Set honorZoneManagerFlag if you have ZoneManager installed and wish to honor the NoDecay flag on ZoneManager zones.  This should, at least for NoDecay, skip all decay within a matching zone with that flag set.
 
@@ -162,41 +167,41 @@ Set cupboardCheckEntity to also check for entities in range of cupboards (i.e. n
 
 ### Permissions
 
-	- nodecay.use   -- Required for NoDecay to work for a user, if the usePermission flag is set to true.
-	- nodecay.admin -- Required to use the /nodecay commands below
+    - nodecay.use   -- Required for NoDecay to work for a user, if the usePermission flag is set to true.
+    - nodecay.admin -- Required to use the /nodecay commands below
 
 ### Commands
 These commands work for any user regardless of permission:
 
-	- `nodecay ?` -- For users to show current global as well as personal status for
-		enable/disable of NoDecay
-	- `nodecay off` -- For users to set their status as disabled.  In this case, decay
-		will be standard for this user's owned items
-	- `nodecay on` -- For users to set their status as enabled.  In this case, decay
-		will be managed by NoDecay for this user's owned items
+    - `nodecay ?` -- For users to show current global as well as personal status for
+        enable/disable of NoDecay
+    - `nodecay off` -- For users to set their status as disabled.  In this case, decay
+        will be standard for this user's owned items
+    - `nodecay on` -- For users to set their status as enabled.  In this case, decay
+        will be managed by NoDecay for this user's owned items
 
 These commands only work for users with the nodecay.admin permission:
 
-	- `nodecay log` -- Toggle logging of debug info to oxide log and rcon
-	- `nodecay info` -- Display current configuration
-		(must still set manually in config and reload)
-	- `nodecay enable` -- Toggle global enable status
-	- `nodecay update` -- Update the list of entities.  This is normally run in the
-		background at each wipe for newly-introduced items.
+    - `nodecay log` -- Toggle logging of debug info to oxide log and rcon
+    - `nodecay info` -- Display current configuration
+        (must still set manually in config and reload)
+    - `nodecay enable` -- Toggle global enable status
+    - `nodecay update` -- Update the list of entities.  This is normally run in the
+        background at each wipe for newly-introduced items.
 
 ### Developers
 A couple of hooks have been implemented:
 
-	- private bool NoDecayGet(ulong playerid=0)
-		- Returns global enabled status if playerid == 0
-		- Returns player status if playerid > 0
+    - private bool NoDecayGet(ulong playerid=0)
+        - Returns global enabled status if playerid == 0
+        - Returns player status if playerid > 0
 
-	- private object NoDecaySet(ulong playerid=0, bool status=true)
-		- Sets global status if playerid == 0
-		- Sets player status if playerid > 0
+    - private object NoDecaySet(ulong playerid=0, bool status=true)
+        - Sets global status if playerid == 0
+        - Sets player status if playerid > 0
 
 ### Credits
-	- **Deicide666ra** and **Piarb**, the original authors of this plugin
-	- **Diesel**, for helping maintain the plugin
+    - **Deicide666ra** and **Piarb**, the original authors of this plugin
+    - **Diesel**, for helping maintain the plugin
 
 Thanks to Deicide666ra, the original author of this plugin, for his permission to continue his work.

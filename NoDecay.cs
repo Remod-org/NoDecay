@@ -1,7 +1,7 @@
 #region License (GPL v2)
 /*
     NoDecay - Scales or disables decay of items for Rust by Facepunch
-    Copyright (c) 2023 RFC1920 <desolationoutpostpve@gmail.com>
+    Copyright (c) 2020 RFC1920 <desolationoutpostpve@gmail.com>
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License v2.0.
@@ -27,12 +27,13 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.93", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.94", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -42,9 +43,9 @@ namespace Oxide.Plugins
         private bool enabled = true;
 
         #region main
-        private Dictionary<string, long> lastConnected = new Dictionary<string, long>();
-        private List<ulong> disabled = new List<ulong>();
-        private Dictionary<string, List<string>> entityinfo = new Dictionary<string, List<string>>();
+        private Dictionary<string, long> lastConnected = new();
+        private List<ulong> disabled = new();
+        private Dictionary<string, List<string>> entityinfo = new();
 
         private int targetLayer = LayerMask.GetMask("Construction", "Construction Trigger", "Trigger", "Deployed");
         private const string permNoDecayUse = "nodecay.use";
@@ -52,7 +53,7 @@ namespace Oxide.Plugins
         private const string TCOVR = "nodecay.overlay";
 
         [PluginReference]
-        private readonly Plugin ZoneManager, GridAPI, JPipes;
+        private readonly Plugin ZoneManager, GridAPI;
 
         #region Message
         private string Lang(string key, string id = null, params object[] args) => string.Format(lang.GetMessage(key, this, id), args);
@@ -74,6 +75,23 @@ namespace Oxide.Plugins
             }, this);
         }
         #endregion
+
+        [AutoPatch]
+        [HarmonyPatch(typeof(BuildingPrivlidge), "PurchaseUpkeepTime", new Type[] { typeof(DecayEntity), typeof(float) })]
+        public static class UpkeepPatch
+        {
+            [HarmonyPrefix]
+            private static bool Prefix(ref float __result, ref DecayEntity entity, ref float deltaTime)
+            {
+                //if ((bool)Interface.Call("NoDecayGet", entity?.GetComponent<BuildingPrivlidge>()?.OwnerID, true))
+                if ((bool)Interface.Call("NoDecayGet", entity?.OwnerID, true))
+                {
+                    __result = 0;
+                    return false;
+                }
+                return true;
+            }
+        }
 
         [AutoPatch]
         [HarmonyPatch(typeof(BuildingBlock), "DamageWallpaper", new Type[] { typeof(float), typeof(int) })]
@@ -111,30 +129,34 @@ namespace Oxide.Plugins
         private void OnServerInitialized()
         {
             // Workaround for no decay on horses, even if set to decay here
-            //if (configData.multipliers["horse"] > 0)
-            //{
-            //    float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
+            if (configData.multipliers["horse"] > 0)
+            {
+                float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
 
-            //    foreach (RidableHorse2 horse in Resources.FindObjectsOfTypeAll<RidableHorse2>())
-            //    {
-            //        if (horse.net == null) continue;
-            //        if (horse.IsHitched() || horse.IsDestroyed) continue;
+                foreach (RidableHorse2 horse in Resources.FindObjectsOfTypeAll<RidableHorse2>())
+                {
+                    if (horse.net == null) continue;
+                    if (horse.IsHitched() || horse.IsDestroyed) continue;
+                    FieldInfo nextDecayTime = typeof(RidableHorse2).GetField("nextDecayTime", (BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static));
+                    float nextDecayTimeValue = (float)nextDecayTime?.GetValue(horse);
 
-            //        if (newdecaytime > 0)
-            //        {
-            //            DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-            //            horse.AddDecayDelay(newdecaytime);
-            //        }
-            //        else
-            //        {
-            //            DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-            //            //horse.nextDecayTime = Time.time + newdecaytime;
-            //            horse.AddDecayDelay(newdecaytime);
-            //        }
-
-            //        horse.SetDecayActive(true);
-            //    }
-            //}
+                    if (newdecaytime > 0)
+                    {
+                        DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
+                        if (nextDecayTimeValue < Time.time)
+                        {
+                            nextDecayTime.SetValue(horse, Time.time + 5f);
+                        }
+                        nextDecayTime.SetValue(horse, nextDecayTimeValue + newdecaytime);
+                    }
+                    else
+                    {
+                        DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
+                        nextDecayTime.SetValue(horse, nextDecayTimeValue + newdecaytime);
+                    }
+                    //horse.SetDecayActive(true);
+                }
+            }
         }
 
         private object CanLootEntity(BasePlayer player, StorageContainer container)
@@ -144,7 +166,7 @@ namespace Oxide.Plugins
             if (!permission.UserHasPermission(player.UserIDString, permNoDecayUse) && configData.Global.usePermission) return null;
             if (container == null) return null;
             BuildingPrivlidge privs = container.GetComponentInParent<BuildingPrivlidge>();
-            if (privs != null) TcOverlay(player);
+            if (privs != null && configData.Global.EnableGui) TcOverlay(player);
             return null;
         }
 
@@ -193,6 +215,7 @@ namespace Oxide.Plugins
 
                 saveInfo.msg.buildingPrivilege.protectedMinutes = configData.Global.protectedDisplayTime;
                 saveInfo.msg.buildingPrivilege.upkeepPeriodMinutes = configData.Global.protectedDisplayTime;
+                //saveInfo.msg.buildingPrivilege.costFraction = 0;
             }
         }
 
@@ -223,7 +246,7 @@ namespace Oxide.Plugins
         {
             if (!enabled) return null;
             if (!(configData.Global.healBuildings || configData.Global.healEntities)) return null;
-            float single = Time.time - entity.lastDecayTick;
+            //float single = Time.time - entity.lastDecayTick;
 
             if (entity == null) return null;
             if (entity?.OwnerID == 0) return null;
@@ -336,7 +359,8 @@ namespace Oxide.Plugins
             return true;
         }
 
-        private object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitInfo)
+        //private object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitInfo)
+        private object OnEntityTakeDamage(DecayEntity entity, HitInfo hitInfo)
         {
             if (!enabled) return null;
             if (entity == null || hitInfo == null) return null;
@@ -359,17 +383,10 @@ namespace Oxide.Plugins
 
                 if (entity is BuildingBlock)
                 {
-                    if (configData.Global.useJPipes && JPipes && (bool)JPipes?.Call("IsPipe", entity) && (bool)JPipes?.Call("IsNoDecayEnabled"))
-                    {
-                        DoLog("Found a JPipe with nodecay enabled");
-                        hitInfo.damageTypes.Scale(Rust.DamageType.Decay, 0f);
-                        return null;
-                    }
-
                     damageAmount = ProcessBuildingDamage(entity, before);
                     isBlock = true;
                 }
-                else if (entity is ModularCar)
+                else if (entity.GetComponent<ModularCar>() != null)
                 {
                     ModularCarGarage garage = entity.GetComponentInParent<ModularCarGarage>();
                     if (garage != null && configData.Global.protectVehicleOnLift)
@@ -471,31 +488,38 @@ namespace Oxide.Plugins
         private void OnEntitySpawned(RidableHorse2 horse)
         {
             // Workaround for no decay on horses, even if set to decay here
-            //if (horse == null) return;
-            //if (horse.net == null) return;
+            if (horse == null) return;
+            if (horse.net == null) return;
 
-            //if (configData.multipliers["horse"] > 0)
-            //{
-            //    float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
-            //    if (newdecaytime > 0)
-            //    {
-            //        DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-            //        horse.AddDecayDelay(newdecaytime);
-            //    }
-            //    else
-            //    {
-            //        DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-            //        horse.AddDecayDelay(newdecaytime);
-            //    }
-            //    horse.SetDecayActive(true);
-            //}
+            if (configData.multipliers["horse"] > 0)
+            {
+                float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
+                FieldInfo nextDecayTime = typeof(RidableHorse2).GetField("nextDecayTime", (BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static));
+                float nextDecayTimeValue = (float)nextDecayTime?.GetValue(horse);
+
+                if (newdecaytime > 0)
+                {
+                    DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
+                    if (nextDecayTimeValue < Time.time)
+                    {
+                        nextDecayTime.SetValue(horse, Time.time + 5f);
+                    }
+                    nextDecayTime.SetValue(horse, nextDecayTimeValue + newdecaytime);
+                }
+                else
+                {
+                    DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
+                    nextDecayTime.SetValue(horse, nextDecayTimeValue + newdecaytime);
+                }
+                //horse.SetDecayActive(true);
+            }
         }
 
         // Workaround for car chassis that won't die
         private void OnEntityDeath(ModularCar car, HitInfo hitinfo)
         {
             DoLog("Car died!  Checking for associated parts...");
-            List<BaseEntity> ents = new List<BaseEntity>();
+            List<BaseEntity> ents = new();
             Vis.Entities(car.transform.position, 1f, ents);
             foreach (BaseEntity ent in ents)
             {
@@ -538,7 +562,7 @@ namespace Oxide.Plugins
             entityinfo["woodwall"] = new List<string>();
             entityinfo["mining"] = new List<string>();
 
-            List<string> names = new List<string>();
+            List<string> names = new();
             foreach (BaseCombatEntity ent in Resources.FindObjectsOfTypeAll<BaseCombatEntity>())
             //foreach (BaseCombatEntity ent in UnityEngine.Object.FindObjectsOfType<BaseCombatEntity>())
             {
@@ -759,7 +783,7 @@ namespace Oxide.Plugins
             else if (configData.Global.cupboardRange > 0)
             {
                 // Disconnected building with no TC, but possibly in cupboard range
-                List<BuildingPrivlidge> cups = new List<BuildingPrivlidge>();
+                List<BuildingPrivlidge> cups = new();
                 Vis.Entities(block.transform.position, configData.Global.cupboardRange, cups, targetLayer);
                 foreach (BuildingPrivlidge cup in cups)
                 {
@@ -808,7 +832,7 @@ namespace Oxide.Plugins
             if (configData.Global.useCupboardRange)
             {
                 // This is the old way using cupboard distance instead of BP.  It's less efficient but some may have made use of this range concept, so here it is.
-                List<BuildingPrivlidge> cups = new List<BuildingPrivlidge>();
+                List<BuildingPrivlidge> cups = new();
                 Vis.Entities(entity.transform.position, configData.Global.cupboardRange, cups, targetLayer);
 
                 DoLog($"CheckCupboardEntity:   Checking for cupboard within {configData.Global.cupboardRange}m of {entity.ShortPrefabName}.", mundane);
@@ -845,7 +869,7 @@ namespace Oxide.Plugins
         {
             BaseEntity cup = container?.entityOwner;
             if (cup == null) return null;
-            if (!(cup is BuildingPrivlidge)) return null;
+            if (cup is not BuildingPrivlidge) return null;
 
             if (!(configData.Global.blockCupboardResources || configData.Global.blockCupboardWood)) return null;
 
@@ -1009,14 +1033,33 @@ namespace Oxide.Plugins
         #region inbound_hooks
         // Returns player status if playerid > 0
         // Returns global enabled status if playerid == 0
-        private bool NoDecayGet(ulong playerid = 0)
+        // Can also check EnableUpkeep value for use with allowing/blocking upkeep cost
+        private bool NoDecayGet(ulong playerid = 0, bool checkupkeep = false)
         {
+            DoLog($"NoDecayGet called with playerid={playerid}, checkupkeep={checkupkeep}");
             if (playerid > 0)
             {
-                return !disabled.Contains(playerid);
+                switch (checkupkeep)
+                {
+                    case true:
+                        DoLog($"Returning player {playerid} enabled status of {!disabled.Contains(playerid)} to caller.  EnableUpkeep is {configData.Global.EnableUpkeep}.");
+                        return enabled && !disabled.Contains(playerid) && !configData.Global.EnableUpkeep;
+                    case false:
+                        DoLog($"Returning player {playerid} enabled status of {!disabled.Contains(playerid)} to caller.");
+                        return enabled && !disabled.Contains(playerid);
+                }
             }
 
-            return enabled;
+            switch (checkupkeep)
+            {
+                case true:
+                    DoLog($"Returning global enabled status of {enabled} to caller.  EnableUpkeep is {configData.Global.EnableUpkeep}.");
+                    return enabled && !configData.Global.EnableUpkeep;
+                case false:
+                default:
+                    DoLog($"Returning global enabled status of {enabled} to caller.");
+                    return enabled;
+            }
         }
 
         // Sets player status if playerid > 0
@@ -1094,7 +1137,7 @@ namespace Oxide.Plugins
             else
             {
                 // From GrTeleport for display only
-                Vector2 r = new Vector2((World.Size / 2) + position.x, (World.Size / 2) + position.z);
+                Vector2 r = new((World.Size / 2) + position.x, (World.Size / 2) + position.z);
                 float x = Mathf.Floor(r.x / 146.3f) % 26;
                 float z = Mathf.Floor(World.Size / 146.3f) - Mathf.Floor(r.y / 146.3f);
 
@@ -1105,7 +1148,7 @@ namespace Oxide.Plugins
         [HookMethod("SendHelpText")]
         private void SendHelpText(BasePlayer player)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.Append("<color=#05eb59>").Append(Name).Append(' ').Append(Version).Append("</color> · Controls decay\n");
             sb.Append("  · ").Append("twig=").Append(configData.multipliers["twig"]).Append(" - campfire=").Append(configData.multipliers["campfire"]).AppendLine();
             sb.Append("  · ").Append("wood =").Append(configData.multipliers["wood"]).Append(" - stone =").Append(configData.multipliers["stone"]).Append(" - sheet =").Append(configData.multipliers["sheet"]).Append(" - armored =").Append(configData.multipliers["armored"]).Append('\n');
@@ -1165,13 +1208,14 @@ namespace Oxide.Plugins
             public bool usePermission;
             public bool useTCOwnerToCheckPermission;
             public bool useBPAuthListForProtectedDays;
+            public bool EnableGui;
+            public bool EnableUpkeep;
             public bool requireCupboard;
             public bool cupboardCheckEntity;
             public float protectedDays;
             public float cupboardRange;
             public bool useCupboardRange;
             public bool DestroyOnZero;
-            public bool useJPipes;
             public bool honorZoneManagerFlag;
             public bool blockCupboardResources;
             public bool blockCupboardWood;
@@ -1186,7 +1230,7 @@ namespace Oxide.Plugins
             public bool protectVehicleOnLift;
             public float protectedDisplayTime;
             public double warningTime;
-            public List<string> overrideZoneManager = new List<string>();
+            public List<string> overrideZoneManager = new();
             public bool respondToActivationHooks;
         }
 
@@ -1200,6 +1244,7 @@ namespace Oxide.Plugins
                 {
                     useBPAuthListForProtectedDays = false,
                     useTCOwnerToCheckPermission = false,
+                    EnableGui = true,
                     protectedDays = 0,
                     cupboardRange = 30f,
                     DestroyOnZero = true,
@@ -1282,6 +1327,11 @@ namespace Oxide.Plugins
             if (configData.Global.healPercentage == 0 || configData.Global.healPercentage >= 1)
             {
                 configData.Global.healPercentage = 0.01f;
+            }
+
+            if (configData.Version < new VersionNumber(1, 0, 94))
+            {
+                configData.Global.EnableGui = true;
             }
 
             configData.Version = Version;
