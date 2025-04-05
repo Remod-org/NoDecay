@@ -33,7 +33,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.94", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.95", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -83,7 +83,6 @@ namespace Oxide.Plugins
             [HarmonyPrefix]
             private static bool Prefix(ref float __result, ref DecayEntity entity, ref float deltaTime)
             {
-                //if ((bool)Interface.Call("NoDecayGet", entity?.GetComponent<BuildingPrivlidge>()?.OwnerID, true))
                 if ((bool)Interface.Call("NoDecayGet", entity?.OwnerID, true))
                 {
                     __result = 0;
@@ -215,7 +214,6 @@ namespace Oxide.Plugins
 
                 saveInfo.msg.buildingPrivilege.protectedMinutes = configData.Global.protectedDisplayTime;
                 saveInfo.msg.buildingPrivilege.upkeepPeriodMinutes = configData.Global.protectedDisplayTime;
-                //saveInfo.msg.buildingPrivilege.costFraction = 0;
             }
         }
 
@@ -364,7 +362,6 @@ namespace Oxide.Plugins
         {
             if (!enabled) return null;
             if (entity == null || hitInfo == null) return null;
-            //if (!hitInfo.damageTypes.Has(Rust.DamageType.Decay)) return null;
             if (hitInfo.damageTypes.GetMajorityDamageType() != Rust.DamageType.Decay) return null;
 
             float damageAmount = 0f;
@@ -485,35 +482,35 @@ namespace Oxide.Plugins
             }
         }
 
-        private void OnEntitySpawned(RidableHorse2 horse)
-        {
-            // Workaround for no decay on horses, even if set to decay here
-            if (horse == null) return;
-            if (horse.net == null) return;
+        //private void OnEntitySpawned(RidableHorse2 horse)
+        //{
+        //    // Workaround for no decay on horses, even if set to decay here
+        //    if (horse == null) return;
+        //    if (horse.net == null) return;
 
-            if (configData.multipliers["horse"] > 0)
-            {
-                float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
-                FieldInfo nextDecayTime = typeof(RidableHorse2).GetField("nextDecayTime", (BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static));
-                float nextDecayTimeValue = (float)nextDecayTime?.GetValue(horse);
+        //    if (configData.multipliers["horse"] > 0)
+        //    {
+        //        float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
+        //        FieldInfo nextDecayTime = typeof(RidableHorse2).GetField("nextDecayTime", (BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static));
+        //        float nextDecayTimeValue = (float)nextDecayTime?.GetValue(horse);
 
-                if (newdecaytime > 0)
-                {
-                    DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-                    if (nextDecayTimeValue < Time.time)
-                    {
-                        nextDecayTime.SetValue(horse, Time.time + 5f);
-                    }
-                    nextDecayTime.SetValue(horse, nextDecayTimeValue + newdecaytime);
-                }
-                else
-                {
-                    DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-                    nextDecayTime.SetValue(horse, nextDecayTimeValue + newdecaytime);
-                }
-                //horse.SetDecayActive(true);
-            }
-        }
+        //        if (newdecaytime > 0)
+        //        {
+        //            DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
+        //            if (nextDecayTimeValue < Time.time)
+        //            {
+        //                nextDecayTime.SetValue(horse, Time.time + 5f);
+        //            }
+        //            nextDecayTime.SetValue(horse, nextDecayTimeValue + newdecaytime);
+        //        }
+        //        else
+        //        {
+        //            DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
+        //            nextDecayTime.SetValue(horse, nextDecayTimeValue + newdecaytime);
+        //        }
+        //        //horse.SetDecayActive(true);
+        //    }
+        //}
 
         // Workaround for car chassis that won't die
         private void OnEntityDeath(ModularCar car, HitInfo hitinfo)
