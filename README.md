@@ -73,6 +73,7 @@ New for 1.0.87 - non building block building parts such as doorways and doors, e
     "box": 0.0,
     "building": 0.0,
     "campfire": 0.0,
+    "candle": 0.0,
     "deployables": 0.1,
     "entityCupboard": 0.0,
     "furnace": 0.0,
@@ -96,7 +97,7 @@ New for 1.0.87 - non building block building parts such as doorways and doors, e
   "Version": {
     "Major": 1,
     "Minor": 0,
-    "Patch": 94
+    "Patch": 96
   }
 }
 ```
@@ -158,6 +159,8 @@ Set cupboardCheckEntity to also check for entities in range of cupboards (i.e. n
 
      "(17:04:31) | [NoDecay] NoDecay.OnEntityTakeDamage on Rowboat took 15.04 ms to execute."
 
+ Set respondToActivationHooks to true to allow the EnableMe and DisableMe hooks to operate.
+
 #### A Few Notes About multipliers, decay.tick, etc.
    For any config file multiplier, you can set to 0 to disable decay for that item, 1 for normal decay, or a higher number for faster decay.  In other words, anything below 1 is slower down to 0 which is no decay.  Anything above 1 increases the rate of decay for that item and, yes, you can set numbers higher than 1.
 
@@ -190,7 +193,7 @@ These commands only work for users with the nodecay.admin permission:
         background at each wipe for newly-introduced items.
 
 ### Developers
-A couple of hooks have been implemented:
+A few hooks have been implemented:
 
     - private bool NoDecayGet(ulong playerid=0)
         - Returns global enabled status if playerid == 0
@@ -199,6 +202,15 @@ A couple of hooks have been implemented:
     - private object NoDecaySet(ulong playerid=0, bool status=true)
         - Sets global status if playerid == 0
         - Sets player status if playerid > 0
+
+    - private void NoDecayLogHook(string message)
+	    - Log data if debug is enabled
+
+    - private void EnableMe()
+	    - Enables NoDecay if respondToActivationHooks=true
+
+    - private void DisableMe()
+	    - Disables NoDecay if respondToActivationHooks=true
 
 ### Credits
     - **Deicide666ra** and **Piarb**, the original authors of this plugin

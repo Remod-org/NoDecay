@@ -33,7 +33,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.95", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.96", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -76,6 +76,8 @@ namespace Oxide.Plugins
         }
         #endregion
 
+        #region Harmony
+        // Prevents materials consumption for upkeep
         [AutoPatch]
         [HarmonyPatch(typeof(BuildingPrivlidge), "PurchaseUpkeepTime", new Type[] { typeof(DecayEntity), typeof(float) })]
         public static class UpkeepPatch
@@ -92,6 +94,7 @@ namespace Oxide.Plugins
             }
         }
 
+        // Prevents wallpaper decay
         [AutoPatch]
         [HarmonyPatch(typeof(BuildingBlock), "DamageWallpaper", new Type[] { typeof(float), typeof(int) })]
         public static class PaperPatch
@@ -107,6 +110,7 @@ namespace Oxide.Plugins
                 return true;
             }
         }
+        #endregion Harmony
 
         private void Init()
         {
@@ -131,29 +135,36 @@ namespace Oxide.Plugins
             if (configData.multipliers["horse"] > 0)
             {
                 float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
+                FieldInfo nextDecayTime = typeof(RidableHorse2).GetField("nextDecayTime", (BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
 
                 foreach (RidableHorse2 horse in Resources.FindObjectsOfTypeAll<RidableHorse2>())
                 {
-                    if (horse.net == null) continue;
-                    if (horse.IsHitched() || horse.IsDestroyed) continue;
-                    FieldInfo nextDecayTime = typeof(RidableHorse2).GetField("nextDecayTime", (BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static));
-                    float nextDecayTimeValue = (float)nextDecayTime?.GetValue(horse);
+                    if (horse is null) continue;
+                    try
+                    {
+                        float nextDecayTimeValue = (float)nextDecayTime?.GetValue(horse);
 
-                    if (newdecaytime > 0)
-                    {
-                        DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-                        if (nextDecayTimeValue < Time.time)
+                        DoLog($"Got RidableHorse2 nextDecayTimeValue of {nextDecayTimeValue}");
+
+                        if (newdecaytime > 0 & nextDecayTimeValue < newdecaytime)
                         {
-                            nextDecayTime.SetValue(horse, Time.time + 5f);
+                            DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
+                            if (nextDecayTimeValue < Time.time)
+                            {
+                                nextDecayTime?.SetValue(horse, Time.time + 5f);
+                            }
+                            else
+                            {
+                                nextDecayTime?.SetValue(horse, nextDecayTimeValue + newdecaytime);
+                            }
                         }
-                        nextDecayTime.SetValue(horse, nextDecayTimeValue + newdecaytime);
+                        else if (newdecaytime > 0)
+                        {
+                            DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
+                            nextDecayTime?.SetValue(horse, nextDecayTimeValue + newdecaytime);
+                        }
                     }
-                    else
-                    {
-                        DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-                        nextDecayTime.SetValue(horse, nextDecayTimeValue + newdecaytime);
-                    }
-                    //horse.SetDecayActive(true);
+                    catch { }
                 }
             }
         }
@@ -253,16 +264,26 @@ namespace Oxide.Plugins
 
             float entityHealAmount = entity.MaxHealth() * configData.Global.healPercentage;
 
-            if (entity is BuildingBlock && configData.Global.healBuildings)
+            if (entity is BuildingBlock block && configData.Global.healBuildings)
             {
-                DoLog($"Healing damage to {entity?.ShortPrefabName}/{(entity as BuildingBlock)?.grade} owned by {entity?.OwnerID} (amount={entityHealAmount}). Current health: {entity.health}");
-                entity.Heal(entityHealAmount);
+                if (configData.Global.cupboardCheckEntity && !CheckCupboardBlock(block))
+                {
+                    DoLog($"[NoHeal] Skipping healing for {entity?.ShortPrefabName} owned by {entity?.OwnerID} – No TC nearby.");
+                    return null;
+                }
+                DoLog($"Healing damage to {entity?.ShortPrefabName}/{block?.grade} owned by {entity?.OwnerID} (amount={entityHealAmount}). Current health: {entity.health}");
+                entity?.Heal(entityHealAmount);
                 return true;
             }
             else if (configData.Global.healEntities)
             {
-                DoLog($"Healing damage to {entity?.ShortPrefabName} owned by {entity?.OwnerID} (amount={entityHealAmount}). Current health {entity.health}");
-                entity.Heal(entityHealAmount);
+                if (configData.Global.cupboardCheckEntity && !CheckCupboardEntity(entity))
+                {
+                    DoLog($"[NoHeal] Skipping healing for {entity?.ShortPrefabName} owned by {entity?.OwnerID} – No TC nearby.");
+                    return null;
+                }
+                DoLog($"Healing damage to {entity?.ShortPrefabName} owned by {entity?.OwnerID} (amount={entityHealAmount}). Current health {entity?.health}");
+                entity?.Heal(entityHealAmount);
                 return true;
             }
             return null;
@@ -482,35 +503,40 @@ namespace Oxide.Plugins
             }
         }
 
-        //private void OnEntitySpawned(RidableHorse2 horse)
-        //{
-        //    // Workaround for no decay on horses, even if set to decay here
-        //    if (horse == null) return;
-        //    if (horse.net == null) return;
+        private void OnEntitySpawned(BaseVehicle horse)
+        {
+            // Workaround for no decay on horses, even if set to decay here
+            if (horse == null) return;
+            if (horse is not RidableHorse2) return;
+            if (horse.net == null) return;
 
-        //    if (configData.multipliers["horse"] > 0)
-        //    {
-        //        float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
-        //        FieldInfo nextDecayTime = typeof(RidableHorse2).GetField("nextDecayTime", (BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static));
-        //        float nextDecayTimeValue = (float)nextDecayTime?.GetValue(horse);
+            if (configData.multipliers["horse"] > 0)
+            {
+                float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
+                FieldInfo nextDecayTime = typeof(RidableHorse2).GetField("nextDecayTime", (BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
+                float nextDecayTimeValue = (float)nextDecayTime?.GetValue(horse);
+                DoLog($"Got RidableHorse2 nextDecayTimeValue of {nextDecayTimeValue} and would like to set it to at least {newdecaytime}");
 
-        //        if (newdecaytime > 0)
-        //        {
-        //            DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-        //            if (nextDecayTimeValue < Time.time)
-        //            {
-        //                nextDecayTime.SetValue(horse, Time.time + 5f);
-        //            }
-        //            nextDecayTime.SetValue(horse, nextDecayTimeValue + newdecaytime);
-        //        }
-        //        else
-        //        {
-        //            DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes", true);
-        //            nextDecayTime.SetValue(horse, nextDecayTimeValue + newdecaytime);
-        //        }
-        //        //horse.SetDecayActive(true);
-        //    }
-        //}
+                if (newdecaytime > 0f)
+                {
+                    DoLog($"Adding {Math.Floor(newdecaytime)} minutes of decay time to horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes");
+                    if (nextDecayTimeValue < Time.time)
+                    {
+                        nextDecayTime?.SetValue(horse, Time.time + 5f);
+                    }
+                    else
+                    {
+                        nextDecayTime?.SetValue(horse, nextDecayTimeValue + newdecaytime);
+                    }
+                }
+                else
+                {
+                    DoLog($"Subtracting {Math.Abs(Math.Floor(newdecaytime))} minutes of decay time from horse {horse.net.ID}, now {Math.Floor(180f + newdecaytime)} minutes");
+                    nextDecayTime?.SetValue(horse, nextDecayTimeValue + newdecaytime);
+                }
+                //horse.SetDecayActive(true);
+            }
+        }
 
         // Workaround for car chassis that won't die
         private void OnEntityDeath(ModularCar car, HitInfo hitinfo)
@@ -897,7 +923,7 @@ namespace Oxide.Plugins
         [Command("nodecay")]
         private void CmdInfo(IPlayer iplayer, string command, string[] args)
         {
-            if ((permission.UserHasPermission(iplayer.Id, permNoDecayAdmin) && args.Length > 0) || iplayer.IsServer)
+            if ((permission.UserHasPermission(iplayer.Id, permNoDecayAdmin) && args.Length > 0) || iplayer.IsServer || iplayer.IsAdmin)
             {
                 switch (args[0])
                 {
@@ -1028,6 +1054,23 @@ namespace Oxide.Plugins
         #endregion
 
         #region inbound_hooks
+        private object NoDecayCandle(Candle entity)
+        {
+            if (entity == null) return null;
+            Puts($"NoDecayCandle called.  Checking {entity.ShortPrefabName}");
+            KeyValuePair<string, List<string>> entity_type = entityinfo.FirstOrDefault(x => x.Value.Contains(entity.ShortPrefabName));
+            if (!entity_type.Equals(default(KeyValuePair<string, List<string>>)))
+            {
+                Puts("Found a candle!");
+                if (NoDecayGet(entity.OwnerID))
+                {
+                    Puts("Blocking decay");
+                    return true;
+                }
+            }
+            return null;
+        }
+
         // Returns player status if playerid > 0
         // Returns global enabled status if playerid == 0
         // Can also check EnableUpkeep value for use with allowing/blocking upkeep cost
@@ -1089,6 +1132,11 @@ namespace Oxide.Plugins
             }
 
             return null;
+        }
+
+        private void NoDecayLogHook(string message)
+        {
+            DoLog(message);
         }
 
         private void DisableMe()
@@ -1167,11 +1215,6 @@ namespace Oxide.Plugins
                 sb.Append("  · ").Append("cupboard check =").Append(false);
             }
             player.ChatMessage(sb.ToString());
-        }
-
-        private void NoDecayLogHook(string message)
-        {
-            DoLog(message);
         }
 
         public void DoLog(string message, bool mundane = false)
