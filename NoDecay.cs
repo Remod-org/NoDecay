@@ -33,7 +33,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.96", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.97", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -333,8 +333,7 @@ namespace Oxide.Plugins
             }
             if (configData.Global.protectedDays > 0 && entity.OwnerID > 0)
             {
-                long lc;
-                lastConnected.TryGetValue(entity.OwnerID.ToString(), out lc);
+                lastConnected.TryGetValue(entity.OwnerID.ToString(), out long lc);
                 if (lc > 0)
                 {
                     long now = ToEpochTime(DateTime.UtcNow);
@@ -348,8 +347,7 @@ namespace Oxide.Plugins
                             foreach (ProtoBuf.PlayerNameID p in bp.authorizedPlayers)
                             {
                                 if (p?.userid == entity.OwnerID) continue;
-                                long lastcon;
-                                lastConnected.TryGetValue(entity.OwnerID.ToString(), out lastcon);
+                                lastConnected.TryGetValue(p.userid.ToString(), out long lastcon);
                                 days = Math.Abs((now - lastcon) / 86400);
                                 if (days <= configData.Global.protectedDays)
                                 {
