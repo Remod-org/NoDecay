@@ -33,7 +33,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.97", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.98", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -135,9 +135,9 @@ namespace Oxide.Plugins
             if (configData.multipliers["horse"] > 0)
             {
                 float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
-                FieldInfo nextDecayTime = typeof(RidableHorse2).GetField("nextDecayTime", (BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
+                FieldInfo nextDecayTime = typeof(RidableHorse).GetField("nextDecayTime", (BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
 
-                foreach (RidableHorse2 horse in Resources.FindObjectsOfTypeAll<RidableHorse2>())
+                foreach (RidableHorse horse in Resources.FindObjectsOfTypeAll<RidableHorse>())
                 {
                     if (horse is null) continue;
                     try
@@ -505,13 +505,13 @@ namespace Oxide.Plugins
         {
             // Workaround for no decay on horses, even if set to decay here
             if (horse == null) return;
-            if (horse is not RidableHorse2) return;
+            if (horse is not RidableHorse) return;
             if (horse.net == null) return;
 
             if (configData.multipliers["horse"] > 0)
             {
                 float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
-                FieldInfo nextDecayTime = typeof(RidableHorse2).GetField("nextDecayTime", (BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
+                FieldInfo nextDecayTime = typeof(RidableHorse).GetField("nextDecayTime", (BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
                 float nextDecayTimeValue = (float)nextDecayTime?.GetValue(horse);
                 DoLog($"Got RidableHorse2 nextDecayTimeValue of {nextDecayTimeValue} and would like to set it to at least {newdecaytime}");
 
