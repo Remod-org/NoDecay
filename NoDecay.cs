@@ -33,7 +33,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.98", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.0.99", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -144,7 +144,7 @@ namespace Oxide.Plugins
                     {
                         float nextDecayTimeValue = (float)nextDecayTime?.GetValue(horse);
 
-                        DoLog($"Got RidableHorse2 nextDecayTimeValue of {nextDecayTimeValue}");
+                        DoLog($"Got RidableHorse nextDecayTimeValue of {nextDecayTimeValue}");
 
                         if (newdecaytime > 0 & nextDecayTimeValue < newdecaytime)
                         {
@@ -360,16 +360,20 @@ namespace Oxide.Plugins
 
                     if (days > configData.Global.protectedDays)
                     {
-                        DoLog($"Allowing decay for owner offline for {configData.Global.protectedDays} days");
+                        DoLog($"Allowing decay for owner offline for {days} day(s).  Limit is {configData.Global.protectedDays}.");
                         return false;
                     }
                     else if (friend)
                     {
-                        DoLog($"Friend authorized on local TC was last connected {days} days ago and is still protected...");
+                        string day = days.ToString();
+                        if (days < 1) day = "less than 1";
+                        DoLog($"Friend authorized on local TC was last connected {day} day(s) ago and is still protected...");
                     }
                     else
                     {
-                        DoLog($"Owner was last connected {days} days ago and is still protected...");
+                        string day = days.ToString();
+                        if (days < 1) day = "less than 1";
+                        DoLog($"Owner was last connected {day} day(s) ago and is still protected...");
                     }
                 }
             }
@@ -513,7 +517,7 @@ namespace Oxide.Plugins
                 float newdecaytime = (180f / configData.multipliers["horse"]) - 180f;
                 FieldInfo nextDecayTime = typeof(RidableHorse).GetField("nextDecayTime", (BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
                 float nextDecayTimeValue = (float)nextDecayTime?.GetValue(horse);
-                DoLog($"Got RidableHorse2 nextDecayTimeValue of {nextDecayTimeValue} and would like to set it to at least {newdecaytime}");
+                DoLog($"Got RidableHorse nextDecayTimeValue of {nextDecayTimeValue} and would like to set it to at least {newdecaytime}");
 
                 if (newdecaytime > 0f)
                 {
@@ -567,6 +571,7 @@ namespace Oxide.Plugins
             entityinfo["box"] = new List<string>();
             entityinfo["building"] = new List<string>();
             entityinfo["campfire"] = new List<string>();
+            entityinfo["candle"] = new List<string>();
             entityinfo["deployables"] = new List<string>();
             entityinfo["furnace"] = new List<string>();
             entityinfo["horse"] = new List<string>();
@@ -615,10 +620,14 @@ namespace Oxide.Plugins
                 }
                 else if (entity_name.Contains("deployed") || entity_name.Contains("speaker") ||
                          entity_name.Contains("strobe") || entity_name.Contains("fog") ||
-                         entity_name.Contains("graveyard") || entity_name.Contains("candle") ||
-                         entity_name.Contains("hatchet") || entity_name.Contains("jackolantern"))
+                         entity_name.Contains("graveyard") || entity_name.Contains("jackolantern") ||
+                         entity_name.Contains("hatchet"))
                 {
                     entityinfo["deployables"].Add(entity_name);
+                }
+                else if (entity_name.Contains("candle"))
+                {
+                    entityinfo["candle"].Add(entity_name);
                 }
                 else if (entity_name.Contains("furnace"))
                 {
@@ -947,6 +956,7 @@ namespace Oxide.Plugins
                         info += "\n\tbox: " + configData.multipliers["box"].ToString();
                         info += "\n\tbuilding: " + configData.multipliers["building"].ToString();
                         info += "\n\tcampfire" + configData.multipliers["campfire"].ToString();
+                        info += "\n\tcandle" + configData.multipliers["candle"].ToString();
                         info += "\n\tdeployables: " + configData.multipliers["deployables"].ToString();
                         info += "\n\tentityCupboard: " + configData.multipliers["entityCupboard"].ToString();
                         info += "\n\tfurnace: " + configData.multipliers["furnace"].ToString();
@@ -1052,23 +1062,6 @@ namespace Oxide.Plugins
         #endregion
 
         #region inbound_hooks
-        private object NoDecayCandle(Candle entity)
-        {
-            if (entity == null) return null;
-            Puts($"NoDecayCandle called.  Checking {entity.ShortPrefabName}");
-            KeyValuePair<string, List<string>> entity_type = entityinfo.FirstOrDefault(x => x.Value.Contains(entity.ShortPrefabName));
-            if (!entity_type.Equals(default(KeyValuePair<string, List<string>>)))
-            {
-                Puts("Found a candle!");
-                if (NoDecayGet(entity.OwnerID))
-                {
-                    Puts("Blocking decay");
-                    return true;
-                }
-            }
-            return null;
-        }
-
         // Returns player status if playerid > 0
         // Returns global enabled status if playerid == 0
         // Can also check EnableUpkeep value for use with allowing/blocking upkeep cost
@@ -1306,6 +1299,7 @@ namespace Oxide.Plugins
                     { "building", 0f },
                     { "box", 0f },
                     { "campfire", 0f },
+                    { "candle", 0f },
                     { "entityCupboard", 0f },
                     { "furnace", 0f },
                     { "highWoodWall", 0f },
@@ -1370,6 +1364,11 @@ namespace Oxide.Plugins
             if (configData.Version < new VersionNumber(1, 0, 94))
             {
                 configData.Global.EnableGui = true;
+            }
+
+            if (configData.Version < new VersionNumber(1, 0, 99))
+            {
+                configData.multipliers.Add("candle", 0);
             }
 
             configData.Version = Version;
