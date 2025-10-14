@@ -1,0 +1,69 @@
+{
+  "Debug": {
+    "outputToRcon": false,
+    "outputMundane": false,
+    "logPosition": false
+  },
+  "Global": {
+    "usePermission": false,
+    "useBPAuthListForLastConnected": true,
+    "requireCupboard": true,
+    "cupboardCheckEntity": false,
+    "protectedDays": 14.0,
+    "cupboardRange": 30.0,
+    "useCupboardRange": false,
+    "DestroyOnZero": true,
+    "useJPipes": false,
+    "honorZoneManagerFlag": true,
+    "blockCupboardResources": false,
+    "blockCupboardWood": false,
+    "blockCupboardStone": false,
+    "blockCupboardMetal": false,
+    "blockCupboardArmor": false,
+    "disableWarning": true,
+    "disableLootWarning": false,
+    "protectVehicleOnLift": true,
+    "protectedDisplayTime": 44000.0,
+    "warningTime": 10.0,
+    "overrideZoneManager": [
+      "vehicle",
+      "balloon"
+    ],
+    "respondToActivationHooks": false
+  },
+  "multipliers": {
+    "armored": 0.0,
+    "attackcopter": 0.0,
+    "balloon": 0.0,
+    "barricade": 0.0,
+    "bbq": 0.0,
+    "boat": 0.0,
+    "box": 0.0,
+    "building": 0.0,
+    "campfire": 0.0,
+    "deployables": 0.1,
+    "entityCupboard": 0.0,
+    "furnace": 0.0,
+    "highStoneWall": 0.0,
+    "highWoodWall": 0.0,
+    "horse": 0.0,
+    "minicopter": 0.0,
+    "mining": 0.0,
+    "sam": 0.0,
+    "scrapcopter": 0.0,
+    "sedan": 0.0,
+    "sheet": 0.0,
+    "stone": 0.0,
+    "trap": 0.0,
+    "twig": 1.0,
+    "vehicle": 0.0,
+    "watchtower": 0.0,
+    "water": 0.0,
+    "wood": 0.0
+  },
+  "Version": {
+    "Major": 1,
+    "Minor": 0,
+    "Patch": 89
+  }
+}

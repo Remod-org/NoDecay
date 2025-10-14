@@ -94,10 +94,11 @@ New for 1.0.87 - non building block building parts such as doorways and doors, e
     "water": 0.0,
     "wood": 0.0
   },
+  "alwaysDecay": [],
   "Version": {
     "Major": 1,
-    "Minor": 0,
-    "Patch": 96
+    "Minor": 1,
+    "Patch": 0
   }
 }
 ```
@@ -160,6 +161,15 @@ Set cupboardCheckEntity to also check for entities in range of cupboards (i.e. n
      "(17:04:31) | [NoDecay] NoDecay.OnEntityTakeDamage on Rowboat took 15.04 ms to execute."
 
  Set respondToActivationHooks to true to allow the EnableMe and DisableMe hooks to operate.
+
+ Populate alwaysDecay with a list of entities you want to have always decay.  For example:
+
+```json
+  "alwaysDecay": [
+      "campfire",
+	  "barricade.wood.cover"
+  ],
+```
 
 #### A Few Notes About multipliers, decay.tick, etc.
    For any config file multiplier, you can set to 0 to disable decay for that item, 1 for normal decay, or a higher number for faster decay.  In other words, anything below 1 is slower down to 0 which is no decay.  Anything above 1 increases the rate of decay for that item and, yes, you can set numbers higher than 1.
