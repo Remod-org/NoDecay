@@ -167,7 +167,7 @@ Set cupboardCheckEntity to also check for entities in range of cupboards (i.e. n
 ```json
   "alwaysDecay": [
       "campfire",
-	  "barricade.wood.cover"
+      "barricade.wood.cover"
   ],
 ```
 
