@@ -33,7 +33,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.0.99", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.1.0", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -344,10 +344,11 @@ namespace Oxide.Plugins
                         BuildingPrivlidge bp = entity?.GetBuildingPrivilege();
                         if (bp != null)
                         {
-                            foreach (ProtoBuf.PlayerNameID p in bp.authorizedPlayers)
+                            //foreach (ProtoBuf.PlayerNameID p in bp.authorizedPlayers)
+                            foreach (ulong p in bp.authorizedPlayers)
                             {
-                                if (p?.userid == entity.OwnerID) continue;
-                                lastConnected.TryGetValue(p.userid.ToString(), out long lastcon);
+                                if (p == entity.OwnerID) continue;
+                                lastConnected.TryGetValue(p.ToString(), out long lastcon);
                                 days = Math.Abs((now - lastcon) / 86400);
                                 if (days <= configData.Global.protectedDays)
                                 {
@@ -390,6 +391,13 @@ namespace Oxide.Plugins
             float damageAmount = 0f;
             DateTime tick = DateTime.Now;
             string entity_name = entity.LookupPrefab().name.ToLower();
+
+            if (configData.alwaysDecay.Count > 0 && configData.alwaysDecay.Contains(entity_name))
+            {
+                DoLog($"Found {entity_name} set to alwaysDecay", true);
+                return null;
+            }
+
             //Puts($"Decay Entity: {entity_name}");
             string owner = entity.OwnerID.ToString();
             bool mundane = false;
@@ -817,9 +825,9 @@ namespace Oxide.Plugins
                 Vis.Entities(block.transform.position, configData.Global.cupboardRange, cups, targetLayer);
                 foreach (BuildingPrivlidge cup in cups)
                 {
-                    foreach (ProtoBuf.PlayerNameID p in cup.authorizedPlayers.ToArray())
+                    foreach (ulong p in cup.authorizedPlayers.ToArray())
                     {
-                        if (p.userid == block.OwnerID)
+                        if (p == block.OwnerID)
                         {
                             DoLog("CheckCupboardBlock:     Found block in range of cupboard!");
                             return cup;
@@ -1224,6 +1232,7 @@ namespace Oxide.Plugins
             public Debug Debug;
             public Global Global;
             public SortedDictionary<string, float> multipliers;
+            public List<string> alwaysDecay;
             public VersionNumber Version;
         }
 
@@ -1289,6 +1298,7 @@ namespace Oxide.Plugins
                     overrideZoneManager = new List<string>() { "vehicle", "balloon" },
                     respondToActivationHooks = false
                 },
+                alwaysDecay = new(),
                 multipliers = new SortedDictionary<string, float>()
                 {
                     { "armored", 0f },
@@ -1369,6 +1379,11 @@ namespace Oxide.Plugins
             if (configData.Version < new VersionNumber(1, 0, 99))
             {
                 configData.multipliers.Add("candle", 0);
+            }
+
+            if (configData.Version < new VersionNumber(1, 1, 0))
+            {
+                configData.alwaysDecay = new();
             }
 
             configData.Version = Version;
