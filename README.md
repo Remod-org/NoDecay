@@ -148,6 +148,8 @@ Set cupboardCheckEntity to also check for entities in range of cupboards (i.e. n
 
  Set DestroyOnZero to true to enable destroying entities when health is zero.
 
+ Set disableLootWarning to true to disable the GUI overlay when opening a TC (This should probably be renamed.)
+
  Set disableWarning to true to disable the "Building Decaying" warning.  This will be set to a default of 4400 minutes (73 hours) based on the value of protectedDisplayTime.  73 hours is enough to hit the default value shown for more than 72 hours of protection without NoDecay.  A warning will still be shown when viewing the contents of the TC.  But, as always, the building is protected anyway since that's what NoDecay is for.  Players may need to periodically open their TC to disable the warning again every couple of days.
 
  Set honorZoneManagerFlag if you have ZoneManager installed and wish to honor the NoDecay flag on ZoneManager zones.  This should, at least for NoDecay, skip all decay within a matching zone with that flag set.

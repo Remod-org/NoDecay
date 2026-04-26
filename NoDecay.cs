@@ -2,6 +2,7 @@
 /*
     NoDecay - Scales or disables decay of items for Rust by Facepunch
     Copyright (c) 2020 RFC1920 <desolationoutpostpve@gmail.com>
+    The ORIGINAL NoDecay!
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License v2.0.
@@ -18,6 +19,7 @@
     Optionally you can also view the license at <http://www.gnu.org/licenses/>.
 */
 #endregion License (GPL v2)
+using Facepunch;
 using HarmonyLib;
 using Oxide.Core;
 using Oxide.Core.Libraries.Covalence;
@@ -33,7 +35,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NoDecay", "RFC1920", "1.1.0", ResourceId = 1160)]
+    [Info("NoDecay", "RFC1920", "1.1.1", ResourceId = 1160)]
     //Original Credit to Deicide666ra/Piarb and Diesel_42o
     //Thanks to Deicide666ra for allowing me to continue his work on this plugin
     [Description("Scales or disables decay of items")]
@@ -190,7 +192,7 @@ namespace Oxide.Plugins
         {
             CuiHelper.DestroyUi(player, TCOVR);
 
-            CuiElementContainer container = UI.Container(TCOVR, UI.Color("3E3C37", 1f), "0.651 0.604", "0.946 0.6365", true, "Overlay");
+            CuiElementContainer container = UI.Container(TCOVR, UI.Color("403E39", 1f), "0.651 0.604", "0.946 0.6365", true, "Overlay");
             UI.Label(ref container, TCOVR, UI.Color("#cacaca", 1f), Lang("protby"), 14, "0 0", "1 1");
 
             CuiHelper.AddUi(player, container);
@@ -344,10 +346,15 @@ namespace Oxide.Plugins
                         BuildingPrivlidge bp = entity?.GetBuildingPrivilege();
                         if (bp != null)
                         {
-                            //foreach (ProtoBuf.PlayerNameID p in bp.authorizedPlayers)
                             foreach (ulong p in bp.authorizedPlayers)
                             {
-                                if (p == entity.OwnerID) continue;
+                                //if (p == entity.OwnerID)
+                                //{
+                                //    days = Math.Abs((now - lc) / 86400);
+                                //    // No need to check others
+                                //    friend = true;
+                                //    break;
+                                //}
                                 lastConnected.TryGetValue(p.ToString(), out long lastcon);
                                 days = Math.Abs((now - lastcon) / 86400);
                                 if (days <= configData.Global.protectedDays)
@@ -389,6 +396,7 @@ namespace Oxide.Plugins
             if (hitInfo.damageTypes.GetMajorityDamageType() != Rust.DamageType.Decay) return null;
 
             float damageAmount = 0f;
+            //bool neverDecay = false;
             DateTime tick = DateTime.Now;
             string entity_name = entity.LookupPrefab().name.ToLower();
 
@@ -397,6 +405,11 @@ namespace Oxide.Plugins
                 DoLog($"Found {entity_name} set to alwaysDecay", true);
                 return null;
             }
+            //else if (configData.neverDecay.Count > 0 && configData.neverDecay.Contains(entity_name))
+            //{
+            //    DoLog($"Found {entity_name} set to neverDecay", true);
+            //    neverDecay = true;
+            //}
 
             //Puts($"Decay Entity: {entity_name}");
             string owner = entity.OwnerID.ToString();
@@ -488,6 +501,8 @@ namespace Oxide.Plugins
                     zones = string.Join(",", zonedata);
                 }
 
+                //if (neverDecay) damageAmount = 0f; // Or before * 1000?
+
                 NextTick(() =>
                 {
                     DoLog($"Decay [{entity_name}{pos} - {entity.net.ID}] before: {before} after: {damageAmount}, item health {entity.health}", mundane);
@@ -552,7 +567,7 @@ namespace Oxide.Plugins
         private void OnEntityDeath(ModularCar car, HitInfo hitinfo)
         {
             DoLog("Car died!  Checking for associated parts...");
-            List<BaseEntity> ents = new();
+            List<BaseEntity> ents = Pool.Get<List<BaseEntity>>();
             Vis.Entities(car.transform.position, 1f, ents);
             foreach (BaseEntity ent in ents)
             {
@@ -563,6 +578,7 @@ namespace Oxide.Plugins
                     ent?.Kill(BaseNetworkable.DestroyMode.Gib);
                 }
             }
+            Pool.FreeUnmanaged(ref ents);
         }
 
         private void OnNewSave()
@@ -821,7 +837,7 @@ namespace Oxide.Plugins
             else if (configData.Global.cupboardRange > 0)
             {
                 // Disconnected building with no TC, but possibly in cupboard range
-                List<BuildingPrivlidge> cups = new();
+                List<BuildingPrivlidge> cups = Pool.Get<List<BuildingPrivlidge>>();
                 Vis.Entities(block.transform.position, configData.Global.cupboardRange, cups, targetLayer);
                 foreach (BuildingPrivlidge cup in cups)
                 {
@@ -834,6 +850,7 @@ namespace Oxide.Plugins
                         }
                     }
                 }
+                Pool.FreeUnmanaged(ref cups);
             }
             return buildingPrivlidge;
         }
@@ -870,7 +887,8 @@ namespace Oxide.Plugins
             if (configData.Global.useCupboardRange)
             {
                 // This is the old way using cupboard distance instead of BP.  It's less efficient but some may have made use of this range concept, so here it is.
-                List<BuildingPrivlidge> cups = new();
+                //List<BuildingPrivlidge> cups = new();
+                List<BuildingPrivlidge> cups = Pool.Get<List<BuildingPrivlidge>>();
                 Vis.Entities(entity.transform.position, configData.Global.cupboardRange, cups, targetLayer);
 
                 DoLog($"CheckCupboardEntity:   Checking for cupboard within {configData.Global.cupboardRange}m of {entity.ShortPrefabName}.", mundane);
@@ -879,9 +897,11 @@ namespace Oxide.Plugins
                 {
                     // cupboard overlap.  Entity safe from decay.
                     DoLog("CheckCupboardEntity:     Found entity layer in range of cupboard!", mundane);
+                    Pool.FreeUnmanaged(ref cups);
                     return true;
                 }
 
+                Pool.FreeUnmanaged(ref cups);
                 DoLog("CheckCupboardEntity:     Unable to find entity layer in range of cupboard.", mundane);
                 return false;
             }
@@ -1233,6 +1253,7 @@ namespace Oxide.Plugins
             public Global Global;
             public SortedDictionary<string, float> multipliers;
             public List<string> alwaysDecay;
+            //public List<string> neverDecay;
             public VersionNumber Version;
         }
 
@@ -1299,6 +1320,7 @@ namespace Oxide.Plugins
                     respondToActivationHooks = false
                 },
                 alwaysDecay = new(),
+                //neverDecay = new(),
                 multipliers = new SortedDictionary<string, float>()
                 {
                     { "armored", 0f },
@@ -1385,6 +1407,11 @@ namespace Oxide.Plugins
             {
                 configData.alwaysDecay = new();
             }
+
+            //if (configData.Version < new VersionNumber(1, 1, 1))
+            //{
+            //    configData.neverDecay = new();
+            //}
 
             configData.Version = Version;
 
